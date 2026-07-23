@@ -1,0 +1,350 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useERP } from '../../context/ERPContext';
+import {
+  Users,
+  GraduationCap,
+  IndianRupee,
+  Clock,
+  UserPlus,
+  BellRing,
+  Bus,
+  Search,
+  FileSpreadsheet,
+  Trash2
+} from 'lucide-react';
+import { StudentAdmissionModal } from './StudentAdmissionModal';
+
+export const AdminDashboard: React.FC = () => {
+  const { 
+    students, 
+    teachers, 
+    setActiveTab, 
+    setActiveModal, 
+    setModalData,
+    cloudSyncStatus,
+    cloudErrorMsg,
+    resetAllData
+  } = useERP();
+  const [showAdmissionModal, setShowAdmissionModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const totalStudentsCount = students.length;
+  const totalTeachersCount = teachers.length;
+
+  const totalCollectedFees = students.reduce((acc, s) => acc + s.fees.paidAmount, 0);
+  const totalPendingFees = students.reduce((acc, s) => acc + s.fees.pendingAmount, 0);
+
+  const filteredStudents = students.filter(
+    (s) =>
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.fatherName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.className.includes(searchQuery) ||
+      s.admissionNo.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6 text-slate-100 font-sans animate-fade-in">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl">
+        <div className="flex items-center gap-4">
+          <div className="bg-white p-2 rounded-2xl border border-blue-500/30 shrink-0">
+            <img
+              src="/logo.jpg"
+              alt="KIDZ R KIDZ"
+              className="h-10 w-auto object-contain"
+            />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+              KIDZ R KIDZ Admin Command Center
+            </h1>
+            <p className="text-xs text-blue-300 font-semibold mt-0.5">
+              Manage student admissions, faculty accounts, fee ledgers, and parent alerts.
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className={`w-2 h-2 rounded-full ${
+                cloudSyncStatus === 'CONNECTED' ? 'bg-emerald-500 animate-pulse' :
+                cloudSyncStatus === 'SYNCING' ? 'bg-amber-400 animate-pulse' :
+                cloudSyncStatus === 'ERROR' ? 'bg-rose-500' : 'bg-slate-500'
+              }`} />
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                {cloudSyncStatus === 'CONNECTED' && 'Cloud Sync Active'}
+                {cloudSyncStatus === 'SYNCING' && 'Syncing with Cloud...'}
+                {cloudSyncStatus === 'ERROR' && `Sync Offline (${cloudErrorMsg})`}
+                {cloudSyncStatus === 'LOCAL_ONLY' && 'Local Mode (Cloud Offline)'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <button
+            onClick={() => setShowAdmissionModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-lg shadow-blue-600/30 transition-all"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>New Student Admission</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('teachers')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-lg shadow-teal-600/30 transition-all"
+          >
+            <Users className="w-4 h-4" />
+            <span>Create Teacher</span>
+          </button>
+
+        </div>
+      </div>
+
+      {/* KPI Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Admissions */}
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-slate-400">Total Admissions</span>
+            <h2 className="text-2xl font-black text-white mt-1">{totalStudentsCount}</h2>
+            <span className="text-[11px] text-blue-400 font-medium">Fresh Register</span>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+            <GraduationCap className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Total Teachers */}
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-slate-400">Teaching Staff</span>
+            <h2 className="text-2xl font-black text-white mt-1">{totalTeachersCount}</h2>
+            <span className="text-[11px] text-teal-400 font-medium">Faculty Registered</span>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-teal-500/20 text-teal-400 flex items-center justify-center">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Fee Collection */}
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-slate-400">Total Collected Fee</span>
+            <h2 className="text-2xl font-black text-emerald-400 mt-1">₹{totalCollectedFees.toLocaleString('en-IN')}</h2>
+            <span className="text-[11px] text-slate-400">Paid at counter & online</span>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <IndianRupee className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Pending Fee */}
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-slate-400">Pending Dues</span>
+            <h2 className="text-2xl font-black text-amber-300 mt-1">₹{totalPendingFees.toLocaleString('en-IN')}</h2>
+            <button onClick={() => setActiveTab('fees')} className="text-[11px] text-amber-400 hover:underline font-medium">
+              View Defaulters →
+            </button>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+            <Clock className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Section: Student Register & Feature Shortcuts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Student Register */}
+        <div className="lg:col-span-2 p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-base text-white">Student Directory & Admissions Register</h3>
+              <p className="text-xs text-slate-400">Full profile records including Father & Mother names, photos and fee status</p>
+            </div>
+
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search student or father..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 w-full sm:w-56"
+              />
+            </div>
+          </div>
+
+          {filteredStudents.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 space-y-2">
+              <Users className="w-8 h-8 mx-auto opacity-30" />
+              <p className="text-xs">No matching student admission records found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-850 text-slate-400 font-bold">
+                    <th className="py-3 px-3">Adm No / Student</th>
+                    <th className="py-3 px-3">Class</th>
+                    <th className="py-3 px-3">Roll No</th>
+                    <th className="py-3 px-3">Total Fee</th>
+                    <th className="py-3 px-3">Pending Due</th>
+                    <th className="py-3 px-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-850">
+                  {filteredStudents.map((stu) => (
+                    <tr key={stu.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={stu.photo}
+                            alt={stu.name}
+                            className="w-8 h-8 rounded-full object-cover border border-slate-800 shrink-0"
+                          />
+                          <div>
+                            <span className="font-bold text-white block">{stu.name}</span>
+                            <span className="text-[10px] font-mono text-blue-400">{stu.admissionNo}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 font-medium text-slate-300">
+                        Class {stu.className}-{stu.section}
+                      </td>
+                      <td className="py-3 px-3 text-slate-300">#{stu.rollNo}</td>
+                      <td className="py-3 px-3 font-semibold text-white">
+                        ₹{stu.fees.totalFee.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3 px-3">
+                        {stu.fees.pendingAmount > 0 ? (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                            ₹{stu.fees.pendingAmount.toLocaleString('en-IN')}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                            Clear
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setModalData(stu);
+                              setActiveModal('EDIT_STUDENT');
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 text-[11px] font-bold border border-amber-500/30 transition-colors"
+                            title="View & Edit Full Student Profile"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              setModalData(stu);
+                              setActiveModal('ID_CARD');
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-200 text-[11px] font-semibold border border-blue-500/40 transition-colors"
+                          >
+                            ID Card
+                          </button>
+                          <button
+                            onClick={() => {
+                              setModalData(stu);
+                              setActiveModal('REPORT_CARD');
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-teal-600/30 hover:bg-teal-600 text-teal-200 text-[11px] font-semibold border border-teal-500/40 transition-colors"
+                          >
+                            Report
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Shortcuts */}
+        <div className="space-y-4">
+          <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-3">
+            <h3 className="font-bold text-base text-white">Administration Modules</h3>
+
+            <div className="space-y-2 text-xs">
+              <button
+                onClick={() => setActiveTab('teachers')}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-left transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4 text-teal-400" />
+                  <div>
+                    <h4 className="font-semibold text-white">Teacher Roles & Assignments</h4>
+                    <p className="text-[10px] text-slate-400">Principal, Class & Subject Teachers</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('fees')}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-left transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <IndianRupee className="w-4 h-4 text-amber-400" />
+                  <div>
+                    <h4 className="font-semibold text-white">Fee Management & Defaulters</h4>
+                    <p className="text-[10px] text-slate-400">Admission, Tuition, Transport & Books</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('notifications')}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-left transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <BellRing className="w-4 h-4 text-blue-400" />
+                  <div>
+                    <h4 className="font-semibold text-white">Broadcast Notifications</h4>
+                    <p className="text-[10px] text-slate-400">To Students, Teachers & Parents</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('transport')}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-left transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <Bus className="w-4 h-4 text-indigo-400" />
+                  <div>
+                    <h4 className="font-semibold text-white">Transport Operations</h4>
+                    <p className="text-[10px] text-slate-400">Bus routes, stops & timings</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('reports')}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-left transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <FileSpreadsheet className="w-4 h-4 text-purple-400" />
+                  <div>
+                    <h4 className="font-semibold text-white">Reports & Analytics</h4>
+                    <p className="text-[10px] text-slate-400">Academic & fee summaries</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* New Student Admission Modal */}
+      {showAdmissionModal && (
+        <StudentAdmissionModal onClose={() => setShowAdmissionModal(false)} />
+      )}
+    </div>
+  );
+};
