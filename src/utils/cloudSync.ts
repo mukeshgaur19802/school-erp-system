@@ -20,12 +20,40 @@ const FALLBACK_REST_URL = 'https://school-erp-system-default-rtdb.firebaseio.com
  * Prioritizes user's Firestore database (if configured in Firebase Console) so they can view it in their console.
  * Falls back to a default real-time sync database path.
  */
+function cleanUndefined(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(cleanUndefined);
+  }
+  if (typeof obj === 'object') {
+    const newObj: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const val = obj[key];
+        if (val !== undefined) {
+          newObj[key] = cleanUndefined(val);
+        }
+      }
+    }
+    return newObj;
+  }
+  return obj;
+}
+
+/**
+ * Pushes school data to the cloud.
+ * Prioritizes user's Firestore database (if configured in Firebase Console) so they can view it in their console.
+ * Falls back to a default real-time sync database path.
+ */
 export async function pushToCloud(data: CloudERPData): Promise<boolean> {
   try {
+    const cleanData = cleanUndefined(data);
     // 1. Try User's Firestore Console (if configured)
     if (isConfigured && db) {
       const docRef = doc(db, 'school', 'krk_global_data');
-      await setDoc(docRef, data);
+      await setDoc(docRef, cleanData);
       return true;
     }
 
@@ -35,7 +63,7 @@ export async function pushToCloud(data: CloudERPData): Promise<boolean> {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(cleanData),
     });
     return response.ok;
   } catch (error) {
