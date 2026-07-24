@@ -26,9 +26,14 @@ const firebaseConfig = {
 // Always initialize so Firestore database features work out of the box
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
+if (typeof window !== 'undefined') {
+  (window as any).firebaseApp = app;
+}
+
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const isConfigured = true;
 
 // Triggering automatic Vercel rebuild for updated env variables
+
 
