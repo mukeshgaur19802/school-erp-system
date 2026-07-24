@@ -44,10 +44,12 @@ export const StudentAdmissionModal: React.FC<StudentAdmissionModalProps> = ({ on
   const [sameAsCurrent, setSameAsCurrent] = useState(true);
   const [parentEmail, setParentEmail] = useState('');
 
+  const PHOTO_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+
   // 3 Photo Uploads (Student, Father, Mother)
-  const [studentPhoto, setStudentPhoto] = useState('https://images.unsplash.com/photo-1544717305-2782549b5136?w=150&auto=format&fit=crop&q=80');
-  const [fatherPhoto, setFatherPhoto] = useState('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80');
-  const [motherPhoto, setMotherPhoto] = useState('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80');
+  const [studentPhoto, setStudentPhoto] = useState(PHOTO_PLACEHOLDER);
+  const [fatherPhoto, setFatherPhoto] = useState(PHOTO_PLACEHOLDER);
+  const [motherPhoto, setMotherPhoto] = useState(PHOTO_PLACEHOLDER);
 
   // Page 2: Siblings, Emergency Contacts & Consents
   const [siblings, setSiblings] = useState<SiblingInfo[]>([]);

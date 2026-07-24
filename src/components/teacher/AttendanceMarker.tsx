@@ -7,7 +7,7 @@ import { CheckSquare, UserCheck, CheckCircle2, XCircle, Clock, Save } from 'luci
 export const AttendanceMarker: React.FC = () => {
   const { students, markAttendance, currentTeacher } = useERP();
 
-  const [selectedClass, setSelectedClass] = useState('5');
+  const [selectedClass, setSelectedClass] = useState('Class 5');
   const [selectedSection, setSelectedSection] = useState('A');
 
   // Filter students matching selected class & section
@@ -118,7 +118,7 @@ export const AttendanceMarker: React.FC = () => {
         </div>
 
         <div className="divide-y divide-slate-800/80">
-          {classStudents.map((stu) => (
+          {[...classStudents].sort((a, b) => a.rollNo - b.rollNo).map((stu) => (
             <div
               key={stu.id}
               className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-800/30 px-3 rounded-2xl transition-colors"

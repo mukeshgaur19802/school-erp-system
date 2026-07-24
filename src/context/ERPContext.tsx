@@ -57,6 +57,8 @@ const DEMO_TEACHER: Teacher = {
   joinDate: '2024-04-01',
 };
 
+export const PHOTO_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+
 const INITIAL_CALENDAR_EVENTS: CalendarEvent[] = [
   { id: 'EV-1', title: 'Independence Day Celebration', date: '2026-08-15', category: 'Celebration', description: 'Flag hoisting, cultural performances, and patriotic speeches.', targetAudience: 'Everyone' },
   { id: 'EV-2', title: 'Teacher\'s Day Celebration', date: '2026-09-05', category: 'Celebration', description: 'Student-led performances honoring teaching faculty.', targetAudience: 'Everyone' },
@@ -146,7 +148,13 @@ function recalculateAlphabeticalRollNumbers(rawStudents: Student[]): Student[] {
   });
 
   const updatedStudents: Student[] = [];
-  Object.values(groups).forEach((group) => {
+  // Sort the keys alphabetically so classes/sections are grouped in order
+  const sortedKeys = Object.keys(groups).sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  );
+
+  sortedKeys.forEach((key) => {
+    const group = groups[key];
     group.sort((a, b) => a.name.trim().localeCompare(b.name.trim(), undefined, { sensitivity: 'base' }));
     group.forEach((stu, idx) => {
       updatedStudents.push({ ...stu, rollNo: idx + 1 });
@@ -196,23 +204,31 @@ function safeSetStorage(keySuffix: string, value: any) {
 
 export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
-    return loadStoredData<UserSession | null>('USER', null);
+    if (typeof window !== 'undefined') {
+      const current = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'USER');
+      if (current) {
+        try { return JSON.parse(current); } catch (e) {}
+      }
+    }
+    return null;
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const current = localStorage.getItem(CURRENT_STORAGE_PREFIX + 'AUTH');
+      const current = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'AUTH');
       if (current) return current === 'true';
-      for (const legacy of LEGACY_STORAGE_PREFIXES) {
-        const legacyVal = localStorage.getItem(legacy + 'AUTH');
-        if (legacyVal) return legacyVal === 'true';
-      }
     }
     return false;
   });
 
   const [activeRole, setActiveRoleState] = useState<UserRole>(() => {
-    const user = loadStoredData<UserSession | null>('USER', null);
+    let user = null;
+    if (typeof window !== 'undefined') {
+      const current = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'USER');
+      if (current) {
+        try { user = JSON.parse(current); } catch (e) {}
+      }
+    }
     if (user?.role) return user.role;
     return loadStoredData<UserRole>('ROLE', 'ADMIN');
   });
@@ -351,11 +367,17 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearTimeout(timeoutId);
   }, [students, teachers, homework, classwork, timetable, calendarEvents, notifications, busRoutes, attendance]);
 
-  // Sync to local storage as secondary backup
+  // Sync session states to sessionStorage, and backing up data tables to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      try { localStorage.setItem(CURRENT_STORAGE_PREFIX + 'AUTH', isAuthenticated ? 'true' : 'false'); } catch (e) {}
-      if (currentUser) safeSetStorage('USER', currentUser);
+      try {
+        sessionStorage.setItem(CURRENT_STORAGE_PREFIX + 'AUTH', isAuthenticated ? 'true' : 'false');
+        if (currentUser) {
+          sessionStorage.setItem(CURRENT_STORAGE_PREFIX + 'USER', JSON.stringify(currentUser));
+        } else {
+          sessionStorage.removeItem(CURRENT_STORAGE_PREFIX + 'USER');
+        }
+      } catch (e) {}
       safeSetStorage('ROLE', activeRole);
       safeSetStorage('STUDENTS', students);
       safeSetStorage('TEACHERS', teachers);
@@ -391,8 +413,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(null);
     if (typeof window !== 'undefined') {
       try {
-        localStorage.removeItem(CURRENT_STORAGE_PREFIX + 'AUTH');
-        localStorage.removeItem(CURRENT_STORAGE_PREFIX + 'USER');
+        sessionStorage.removeItem(CURRENT_STORAGE_PREFIX + 'AUTH');
+        sessionStorage.removeItem(CURRENT_STORAGE_PREFIX + 'USER');
       } catch (e) {}
     }
     addToast('Signed Out', 'Logged out from KIDZ R KIDZ ERP.', 'info');
@@ -473,7 +495,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: newId,
       password: data.password || '123456',
       joinDate: new Date().toISOString().split('T')[0],
-      avatar: data.avatar || `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random()*100)}?w=150&auto=format&fit=crop&q=80`
+      avatar: data.avatar || PHOTO_PLACEHOLDER
     };
     setTeachers((prev) => [newTeacher, ...prev]);
     setSelectedTeacherId(newId);

@@ -29,6 +29,7 @@ export const AdminDashboard: React.FC = () => {
   } = useERP();
   const [showAdmissionModal, setShowAdmissionModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dashboardListMode, setDashboardListMode] = useState<'STUDENTS' | 'TEACHERS'>('STUDENTS');
 
   const totalStudentsCount = students.length;
   const totalTeachersCount = teachers.length;
@@ -40,8 +41,29 @@ export const AdminDashboard: React.FC = () => {
     (s) =>
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.fatherName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.className.includes(searchQuery) ||
+      s.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.admissionNo.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    const classCompare = a.className.localeCompare(b.className, undefined, { numeric: true });
+    if (classCompare !== 0) return classCompare;
+    const sectionCompare = a.section.localeCompare(b.section);
+    if (sectionCompare !== 0) return sectionCompare;
+    return a.rollNo - b.rollNo;
+  });
+
+  const filteredTeachers = teachers.filter(
+    (t) =>
+      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.mobile.includes(searchQuery) ||
+      t.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.assignments.some(
+        (a) =>
+          a.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          a.className.toLowerCase().includes(searchQuery.toLowerCase())
+      )
   );
 
   return (
@@ -102,7 +124,17 @@ export const AdminDashboard: React.FC = () => {
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Admissions */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between">
+        <div 
+          onClick={() => {
+            setDashboardListMode('STUDENTS');
+            setSearchQuery('');
+          }}
+          className={`p-5 rounded-2xl border shadow-xl flex items-center justify-between cursor-pointer transition-all duration-200 ${
+            dashboardListMode === 'STUDENTS'
+              ? 'border-blue-500/60 bg-blue-950/20 shadow-blue-950/20'
+              : 'border-slate-800 bg-slate-900 hover:border-blue-500/40 hover:bg-slate-850/60'
+          }`}
+        >
           <div>
             <span className="text-xs font-semibold text-slate-400">Total Admissions</span>
             <h2 className="text-2xl font-black text-white mt-1">{totalStudentsCount}</h2>
@@ -114,7 +146,17 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Total Teachers */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between">
+        <div 
+          onClick={() => {
+            setDashboardListMode('TEACHERS');
+            setSearchQuery('');
+          }}
+          className={`p-5 rounded-2xl border shadow-xl flex items-center justify-between cursor-pointer transition-all duration-200 ${
+            dashboardListMode === 'TEACHERS'
+              ? 'border-teal-500/60 bg-teal-950/20 shadow-teal-950/20'
+              : 'border-slate-800 bg-slate-900 hover:border-teal-500/40 hover:bg-slate-850/60'
+          }`}
+        >
           <div>
             <span className="text-xs font-semibold text-slate-400">Teaching Staff</span>
             <h2 className="text-2xl font-black text-white mt-1">{totalTeachersCount}</h2>
@@ -154,115 +196,201 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Main Section: Student Register & Feature Shortcuts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Student Register */}
+        {/* Left Column: Student or Teacher Register */}
         <div className="lg:col-span-2 p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="font-bold text-base text-white">Student Directory & Admissions Register</h3>
-              <p className="text-xs text-slate-400">Full profile records including Father & Mother names, photos and fee status</p>
+              <h3 className="font-bold text-base text-white">
+                {dashboardListMode === 'STUDENTS' ? 'Student Directory & Admissions Register' : 'Teaching Staff Directory'}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {dashboardListMode === 'STUDENTS'
+                  ? 'Full profile records including Father & Mother names, photos and fee status'
+                  : 'Full teaching faculty records with mobile logins, subjects and class responsibilities'}
+              </p>
             </div>
 
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Search student or father..."
+                placeholder={dashboardListMode === 'STUDENTS' ? 'Search student or father...' : 'Search teacher, class, or subject...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 w-full sm:w-56"
+                className={`pl-9 pr-4 py-1.5 rounded-xl bg-slate-800 border text-xs text-white placeholder-slate-400 focus:outline-none w-full sm:w-56 transition-colors ${
+                  dashboardListMode === 'STUDENTS' ? 'border-slate-700 focus:border-blue-500' : 'border-slate-700 focus:border-teal-500'
+                }`}
               />
             </div>
           </div>
 
-          {filteredStudents.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 space-y-2">
-              <Users className="w-8 h-8 mx-auto opacity-30" />
-              <p className="text-xs">No matching student admission records found.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-850 text-slate-400 font-bold">
-                    <th className="py-3 px-3">Adm No / Student</th>
-                    <th className="py-3 px-3">Class</th>
-                    <th className="py-3 px-3">Roll No</th>
-                    <th className="py-3 px-3">Total Fee</th>
-                    <th className="py-3 px-3">Pending Due</th>
-                    <th className="py-3 px-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-850">
-                  {filteredStudents.map((stu) => (
-                    <tr key={stu.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={stu.photo}
-                            alt={stu.name}
-                            className="w-8 h-8 rounded-full object-cover border border-slate-800 shrink-0"
-                          />
-                          <div>
-                            <span className="font-bold text-white block">{stu.name}</span>
-                            <span className="text-[10px] font-mono text-blue-400">{stu.admissionNo}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 font-medium text-slate-300">
-                        Class {stu.className}-{stu.section}
-                      </td>
-                      <td className="py-3 px-3 text-slate-300">#{stu.rollNo}</td>
-                      <td className="py-3 px-3 font-semibold text-white">
-                        ₹{stu.fees.totalFee.toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-3">
-                        {stu.fees.pendingAmount > 0 ? (
-                          <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-                            ₹{stu.fees.pendingAmount.toLocaleString('en-IN')}
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
-                            Clear
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => {
-                              setModalData(stu);
-                              setActiveModal('EDIT_STUDENT');
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 text-[11px] font-bold border border-amber-500/30 transition-colors"
-                            title="View & Edit Full Student Profile"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => {
-                              setModalData(stu);
-                              setActiveModal('ID_CARD');
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-200 text-[11px] font-semibold border border-blue-500/40 transition-colors"
-                          >
-                            ID Card
-                          </button>
-                          <button
-                            onClick={() => {
-                              setModalData(stu);
-                              setActiveModal('REPORT_CARD');
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-teal-600/30 hover:bg-teal-600 text-teal-200 text-[11px] font-semibold border border-teal-500/40 transition-colors"
-                          >
-                            Report
-                          </button>
-                        </div>
-                      </td>
+          {dashboardListMode === 'STUDENTS' ? (
+            sortedStudents.length === 0 ? (
+              <div className="py-12 text-center text-slate-500 space-y-2">
+                <Users className="w-8 h-8 mx-auto opacity-30" />
+                <p className="text-xs">No matching student admission records found.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto animate-fade-in">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-850 text-slate-400 font-bold">
+                      <th className="py-3 px-3">Adm No / Student</th>
+                      <th className="py-3 px-3">Class</th>
+                      <th className="py-3 px-3">Roll No</th>
+                      <th className="py-3 px-3">Total Fee</th>
+                      <th className="py-3 px-3">Pending Due</th>
+                      <th className="py-3 px-3 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-850">
+                    {sortedStudents.map((stu) => (
+                      <tr key={stu.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={stu.photo}
+                              alt={stu.name}
+                              className="w-8 h-8 rounded-full object-cover border border-slate-800 shrink-0"
+                            />
+                            <div>
+                              <span className="font-bold text-white block">{stu.name}</span>
+                              <span className="text-[10px] font-mono text-blue-400">{stu.admissionNo}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 font-medium text-slate-300">
+                          Class {stu.className}-{stu.section}
+                        </td>
+                        <td className="py-3 px-3 text-slate-300">#{stu.rollNo}</td>
+                        <td className="py-3 px-3 font-semibold text-white">
+                          ₹{stu.fees.totalFee.toLocaleString('en-IN')}
+                        </td>
+                        <td className="py-3 px-3">
+                          {stu.fees.pendingAmount > 0 ? (
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                              ₹{stu.fees.pendingAmount.toLocaleString('en-IN')}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                              Clear
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setModalData(stu);
+                                setActiveModal('EDIT_STUDENT');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 text-[11px] font-bold border border-amber-500/30 transition-colors"
+                              title="View & Edit Full Student Profile"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                setModalData(stu);
+                                setActiveModal('ID_CARD');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-200 text-[11px] font-semibold border border-blue-500/40 transition-colors"
+                            >
+                              ID Card
+                            </button>
+                            <button
+                              onClick={() => {
+                                setModalData(stu);
+                                setActiveModal('REPORT_CARD');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-teal-600/30 hover:bg-teal-600 text-teal-200 text-[11px] font-semibold border border-teal-500/40 transition-colors"
+                            >
+                              Report
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : (
+            filteredTeachers.length === 0 ? (
+              <div className="py-12 text-center text-slate-500 space-y-2">
+                <Users className="w-8 h-8 mx-auto opacity-30" />
+                <p className="text-xs">No matching teacher records found.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto animate-fade-in font-sans">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-850 text-slate-400 font-bold">
+                      <th className="py-3 px-3">Teacher</th>
+                      <th className="py-3 px-3">Role</th>
+                      <th className="py-3 px-3">Class & Subjects</th>
+                      <th className="py-3 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-850">
+                    {filteredTeachers.map((tch) => (
+                      <tr key={tch.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={tch.avatar || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"}
+                              alt={tch.name}
+                              className="w-8 h-8 rounded-full object-cover border border-slate-800 shrink-0"
+                            />
+                            <div>
+                              <span className="font-bold text-white block">{tch.name}</span>
+                              <span className="text-[10px] font-mono text-teal-400">{tch.mobile}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-slate-350">
+                          {tch.role}
+                        </td>
+                        <td className="py-3 px-3 text-slate-300">
+                          <div className="flex flex-wrap gap-1.5 max-w-sm">
+                            {tch.assignments.map((asgn, i) => (
+                              <span
+                                key={i}
+                                className="px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700/80 text-[10px] text-teal-300 font-semibold"
+                              >
+                                {asgn.className}-{asgn.section}: {asgn.subject}{asgn.isClassTeacher && ' (Class Teacher 🏆)'}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setModalData(tch);
+                                setActiveModal('EDIT_TEACHER');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-teal-600/20 hover:bg-teal-600 text-teal-300 hover:text-white text-[11px] font-bold border border-teal-500/30 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                setModalData(tch);
+                                setActiveModal('INSPECT_TEACHER');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium border border-slate-700 transition-colors"
+                            >
+                              View
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
           )}
         </div>
 

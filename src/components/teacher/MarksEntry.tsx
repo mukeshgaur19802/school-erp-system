@@ -7,7 +7,7 @@ import { Award, Save, CheckCircle2 } from 'lucide-react';
 export const MarksEntry: React.FC = () => {
   const { students, addExamMarks } = useERP();
 
-  const [selectedClass, setSelectedClass] = useState('5');
+  const [selectedClass, setSelectedClass] = useState('Class 5');
   const [selectedSection, setSelectedSection] = useState('A');
   const [examName, setExamName] = useState('Unit Test 1 (Term 2025-26)');
   const [subject, setSubject] = useState('Mathematics');
@@ -143,7 +143,7 @@ export const MarksEntry: React.FC = () => {
         </div>
 
         <div className="divide-y divide-slate-800/80">
-          {classStudents.map((stu) => {
+          {[...classStudents].sort((a, b) => a.rollNo - b.rollNo).map((stu) => {
             const score = marksState[stu.id] ?? 45;
             const grade = calculateGrade(score, maxMarks);
             return (
