@@ -246,7 +246,7 @@ export const EditTeacherModal: React.FC = () => {
               onChange={(e) => setNewPassword(e.target.value)}
               className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono"
             />
-            <p className="text-[10px] text-slate-400">Current Password: <span className="font-mono text-white font-bold">{teacher.password || '123456'}</span></p>
+            <p className="text-[10px] text-slate-400">Current Password: <span className="font-mono text-white font-bold">{teacher.password || 'teach#321'}</span></p>
           </div>
 
           {/* Actions */}

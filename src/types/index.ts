@@ -105,6 +105,7 @@ export interface Student {
 
   fees: FeeBreakdown;
   paymentHistory: FeePaymentRecord[];
+  password?: string;
 }
 
 export interface AttendanceRecord {

@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
-import { X, Save, UserCheck, Upload, Trash2, MapPin, IndianRupee } from 'lucide-react';
+import { X, Save, UserCheck, Upload, Trash2, MapPin, IndianRupee, KeyRound } from 'lucide-react';
 import { Student } from '../../types';
 import { compressImage } from '../../utils/imageCompressor';
 
 export const EditStudentModal: React.FC = () => {
-  const { modalData, editStudent, setActiveModal } = useERP();
+  const { modalData, editStudent, resetStudentPassword, setActiveModal } = useERP();
   const student: Student = modalData;
 
   if (!student) return null;
@@ -44,6 +44,7 @@ export const EditStudentModal: React.FC = () => {
   const [booksFee, setBooksFee] = useState(student.fees.booksFee);
   const [annualFee, setAnnualFee] = useState(student.fees.annualFee);
   const [paidAmount, setPaidAmount] = useState(student.fees.paidAmount);
+  const [newPassword, setNewPassword] = useState('');
 
   const totalFee = Number(admissionFee) + Number(tuitionFee) + Number(transportFee) + Number(booksFee) + Number(annualFee);
   const pendingAmount = Math.max(0, totalFee - Number(paidAmount));
@@ -103,6 +104,10 @@ export const EditStudentModal: React.FC = () => {
         pendingAmount,
       },
     });
+
+    if (newPassword.trim()) {
+      resetStudentPassword(student.id, newPassword.trim());
+    }
 
     setActiveModal('NONE');
   };
@@ -303,6 +308,22 @@ export const EditStudentModal: React.FC = () => {
               <label className="block text-slate-300 mb-1">Permanent Address</label>
               <textarea rows={2} value={permanentAddress} onChange={(e) => setPermanentAddress(e.target.value)} className="w-full px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-white" />
             </div>
+          </div>
+
+          {/* Admin Password Reset Box */}
+          <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+            <span className="font-bold text-amber-400 flex items-center gap-1.5 text-[11px]">
+              <KeyRound className="w-3.5 h-3.5" />
+              Reset Parent Portal Password (Username: Father's Mobile)
+            </span>
+            <input
+              type="text"
+              placeholder="Enter new password (leave empty to keep current)"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono"
+            />
+            <p className="text-[10px] text-slate-400">Current Password: <span className="font-mono text-white font-bold">{student.password || 'student#123'}</span></p>
           </div>
 
           {/* Actions */}

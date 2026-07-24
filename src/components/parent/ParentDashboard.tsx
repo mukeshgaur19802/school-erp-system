@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
 import {
   GraduationCap,
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export const ParentDashboard: React.FC = () => {
-  const { currentStudent, homework, attendance, examMarks, setActiveTab, setActiveModal, setModalData } = useERP();
+  const { currentStudent, homework, attendance, examMarks, setActiveTab, setActiveModal, setModalData, editStudent, addToast } = useERP();
 
   if (!currentStudent) {
     return (
@@ -37,6 +37,36 @@ export const ParentDashboard: React.FC = () => {
   const studentHw = homework.filter(
     (h) => h.className === currentStudent.className && h.section === currentStudent.section
   );
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangePassExpanded, setIsChangePassExpanded] = useState(false);
+
+  const handlePasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentStudent) return;
+    const actualPass = currentStudent.password || 'student#123';
+    if (currentPassword !== actualPass) {
+      addToast('Error', 'Incorrect current password.', 'error');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      addToast('Error', 'New passwords do not match.', 'error');
+      return;
+    }
+    if (newPassword.length < 4) {
+      addToast('Error', 'Password must be at least 4 characters long.', 'error');
+      return;
+    }
+    editStudent(currentStudent.id, { password: newPassword });
+    addToast('Success', 'Password updated successfully.', 'success');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setIsChangePassExpanded(false);
+  };
 
   return (
     <div className="space-y-6 text-slate-100 font-sans animate-fade-in">
@@ -182,6 +212,64 @@ export const ParentDashboard: React.FC = () => {
             <Award className="w-5 h-5" />
           </div>
         </div>
+      </div>
+
+      {/* Change Password Section */}
+      <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+        <div 
+          onClick={() => setIsChangePassExpanded(!isChangePassExpanded)}
+          className="flex items-center justify-between cursor-pointer"
+        >
+          <h3 className="font-bold text-base text-white flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            🔑 Change Portal Password
+          </h3>
+          <span className="text-xs text-blue-400 font-bold">{isChangePassExpanded ? 'Hide' : 'Change'}</span>
+        </div>
+
+        {isChangePassExpanded && (
+          <form onSubmit={handlePasswordChange} className="space-y-3 pt-2 text-xs max-w-sm">
+            <div>
+              <label className="block text-slate-400 font-semibold mb-1">Current Password</label>
+              <input 
+                type="password"
+                required
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-xl bg-slate-850 border border-slate-700 text-white font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-400 font-semibold mb-1">New Password</label>
+              <input 
+                type="password"
+                required
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-xl bg-slate-850 border border-slate-700 text-white font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-400 font-semibold mb-1">Confirm New Password</label>
+              <input 
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-xl bg-slate-850 border border-slate-700 text-white font-mono"
+              />
+            </div>
+            <button 
+              type="submit"
+              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md shadow-blue-900/10"
+            >
+              Update Password
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

@@ -43,7 +43,7 @@ const DEMO_TEACHER: Teacher = {
   name: 'Mrs. Sharma',
   mobile: '0000000000',
   email: 'sharma@kidzrkidz.edu',
-  password: '123456',
+  password: 'teach#321',
   role: 'Class Teacher',
   assignments: [
     {
@@ -104,6 +104,7 @@ interface ERPContextType {
   addTeacher: (data: Omit<Teacher, 'id' | 'joinDate'>) => void;
   editTeacher: (id: string, updatedData: Partial<Teacher>) => void;
   resetTeacherPassword: (teacherId: string, newPass: string) => void;
+  resetStudentPassword: (studentId: string, newPass: string) => void;
   markAttendance: (records: { studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE'; remarks?: string }[], className: string, section: string) => void;
   addHomework: (data: Omit<Homework, 'id' | 'assignedDate'>) => void;
   addClasswork: (data: Omit<Classwork, 'id' | 'date'>) => void;
@@ -449,6 +450,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: newId,
       admissionNo: admNo,
       paymentHistory: [],
+      password: 'student#123',
     };
 
     setStudents((prev) => {
@@ -493,7 +495,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newTeacher: Teacher = {
       ...data,
       id: newId,
-      password: data.password || '123456',
+      password: data.password || 'teach#321',
       joinDate: new Date().toISOString().split('T')[0],
       avatar: data.avatar || PHOTO_PLACEHOLDER
     };
@@ -514,6 +516,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((t) => (t.id === teacherId ? { ...t, password: newPass } : t))
     );
     addToast('Password Reset', `Password reset for teacher account.`, 'success');
+  };
+
+  const resetStudentPassword = (studentId: string, newPass: string) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.id === studentId ? { ...s, password: newPass } : s))
+    );
+    addToast('Password Reset', `Password reset for student account.`, 'success');
   };
 
   const markAttendance = (
@@ -726,6 +735,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addTeacher,
         editTeacher,
         resetTeacherPassword,
+        resetStudentPassword,
         markAttendance,
         addHomework,
         addClasswork,

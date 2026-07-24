@@ -65,10 +65,10 @@ export default function MobileAppPortal() {
 
   // Input states
   const [teacherPhone, setTeacherPhone] = useState('0000000000');
-  const [teacherPass, setTeacherPass] = useState('123456');
+  const [teacherPass, setTeacherPass] = useState('teach#321');
 
   const [parentPhone, setParentPhone] = useState('9876543210');
-  const [parentAdmNo, setParentAdmNo] = useState('');
+  const [parentPassword, setParentPassword] = useState('student#123');
 
   const [transportPhone, setTransportPhone] = useState('8888888888');
 
@@ -80,9 +80,9 @@ export default function MobileAppPortal() {
     if (typeof window !== 'undefined') {
       setAppUrl(`${window.location.origin}/app`);
       
-      // Auto-populate first student's admission no for demonstration
-      if (students && students.length > 0 && !parentAdmNo) {
-        setParentAdmNo(students[0].admissionNo);
+      // Auto-populate first student's parent phone for demonstration
+      if (students && students.length > 0 && parentPhone === '9876543210') {
+        setParentPhone(students[0].parentPhone);
       }
     }
   }, [students]);
@@ -140,7 +140,7 @@ export default function MobileAppPortal() {
     const match = teachers.find(t => t.mobile.trim() === teacherPhone.trim());
     if (match) {
       if (match.password && match.password !== teacherPass) {
-        setErrorMsg('Invalid password. Default is 123456.');
+        setErrorMsg('Invalid password. Default is teach#321.');
         return;
       }
       login('TEACHER', {
@@ -162,16 +162,21 @@ export default function MobileAppPortal() {
     e.preventDefault();
     setErrorMsg('');
     
-    // Find student by admission number
-    const match = students.find(s => s.admissionNo.trim().toLowerCase() === parentAdmNo.trim().toLowerCase());
+    // Find student by parent phone
+    const match = students.find(s => s.parentPhone.trim() === parentPhone.trim());
     if (match) {
+      const studentPass = match.password || 'student#123';
+      if (studentPass !== parentPassword) {
+        setErrorMsg('Incorrect password. Default parent password is student#123.');
+        return;
+      }
       setSelectedStudentId(match.id);
       login('PARENT', {
         mobile: parentPhone,
         name: `Parent of ${match.name}`
       });
     } else {
-      setErrorMsg(`No student found with Admission No: "${parentAdmNo}". Try prefilled ones or check Admin Console.`);
+      setErrorMsg(`No student account registered under phone number: "${parentPhone}".`);
     }
   };
 
@@ -323,16 +328,15 @@ export default function MobileAppPortal() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-slate-400 font-semibold mb-1">Child's Admission No</label>
+                    <label className="block text-slate-400 font-semibold mb-1">Portal Password</label>
                     <div className="relative">
-                      <User className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+                      <Lock className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
                       <input
-                        type="text"
+                        type="password"
                         required
-                        placeholder="e.g. KRK-2025-001"
-                        value={parentAdmNo}
-                        onChange={e => setParentAdmNo(e.target.value)}
-                        className="w-full pl-8 pr-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-650"
+                        value={parentPassword}
+                        onChange={e => setParentPassword(e.target.value)}
+                        className="w-full pl-8 pr-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"
                       />
                     </div>
                   </div>
