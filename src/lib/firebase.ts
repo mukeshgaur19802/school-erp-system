@@ -31,7 +31,11 @@ if (typeof window !== 'undefined') {
   (window as any).firebaseApp = app;
 }
 
-export const db = getFirestore(app);
+const databaseId = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID && process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID !== ''
+  ? process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID
+  : '(default)';
+
+export const db = getFirestore(app, databaseId);
 export const auth = getAuth(app);
 export const isConfigured = true;
 
