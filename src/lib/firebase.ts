@@ -24,6 +24,7 @@ const firebaseConfig = {
 };
 
 // Always initialize so Firestore database features work out of the box
+console.log("ACTIVE FIREBASE PROJECT ID:", firebaseConfig.projectId);
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 if (typeof window !== 'undefined') {
