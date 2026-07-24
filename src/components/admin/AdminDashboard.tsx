@@ -28,6 +28,8 @@ export const AdminDashboard: React.FC = () => {
     resetAllData
   } = useERP();
   const [showAdmissionModal, setShowAdmissionModal] = useState(false);
+  const [showReceivedFeesModal, setShowReceivedFeesModal] = useState(false);
+  const [showPendingDuesModal, setShowPendingDuesModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dashboardListMode, setDashboardListMode] = useState<'STUDENTS' | 'TEACHERS'>('STUDENTS');
 
@@ -168,11 +170,14 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Fee Collection */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between">
+        <div 
+          onClick={() => setShowReceivedFeesModal(true)}
+          className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between cursor-pointer hover:border-emerald-500/50 hover:bg-slate-850/60 transition-all duration-200"
+        >
           <div>
             <span className="text-xs font-semibold text-slate-400">Total Collected Fee</span>
             <h2 className="text-2xl font-black text-emerald-400 mt-1">₹{totalCollectedFees.toLocaleString('en-IN')}</h2>
-            <span className="text-[11px] text-slate-400">Paid at counter & online</span>
+            <span className="text-[11px] text-emerald-400 font-medium hover:underline">View Transactions Ledger →</span>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
             <IndianRupee className="w-6 h-6" />
@@ -180,13 +185,14 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Pending Fee */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between">
+        <div 
+          onClick={() => setShowPendingDuesModal(true)}
+          className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between cursor-pointer hover:border-amber-500/50 hover:bg-slate-850/60 transition-all duration-200"
+        >
           <div>
             <span className="text-xs font-semibold text-slate-400">Pending Dues</span>
             <h2 className="text-2xl font-black text-amber-300 mt-1">₹{totalPendingFees.toLocaleString('en-IN')}</h2>
-            <button onClick={() => setActiveTab('fees')} className="text-[11px] text-amber-400 hover:underline font-medium">
-              View Defaulters →
-            </button>
+            <span className="text-[11px] text-amber-400 font-medium hover:underline">View Defaulters List →</span>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
             <Clock className="w-6 h-6" />
@@ -254,8 +260,17 @@ export const AdminDashboard: React.FC = () => {
                               className="w-8 h-8 rounded-full object-cover border border-slate-800 shrink-0"
                             />
                             <div>
-                              <span className="font-bold text-white block">{stu.name}</span>
+                            <div 
+                              onClick={() => {
+                                setModalData(stu);
+                                setActiveModal('EDIT_STUDENT');
+                              }}
+                              className="cursor-pointer group text-left"
+                              title="Click to view full student details"
+                            >
+                              <span className="font-bold text-white block group-hover:underline group-hover:text-blue-400 transition-colors">{stu.name}</span>
                               <span className="text-[10px] font-mono text-blue-400">{stu.admissionNo}</span>
+                            </div>
                             </div>
                           </div>
                         </td>
@@ -343,8 +358,17 @@ export const AdminDashboard: React.FC = () => {
                               className="w-8 h-8 rounded-full object-cover border border-slate-800 shrink-0"
                             />
                             <div>
-                              <span className="font-bold text-white block">{tch.name}</span>
+                            <div 
+                              onClick={() => {
+                                setModalData(tch);
+                                setActiveModal('INSPECT_TEACHER');
+                              }}
+                              className="cursor-pointer group text-left"
+                              title="Click to view teacher assignments & profile"
+                            >
+                              <span className="font-bold text-white block group-hover:underline group-hover:text-teal-400 transition-colors">{tch.name}</span>
                               <span className="text-[10px] font-mono text-teal-400">{tch.mobile}</span>
+                            </div>
                             </div>
                           </div>
                         </td>
@@ -472,6 +496,157 @@ export const AdminDashboard: React.FC = () => {
       {/* New Student Admission Modal */}
       {showAdmissionModal && (
         <StudentAdmissionModal onClose={() => setShowAdmissionModal(false)} />
+      )}
+
+      {/* Received Fees Ledger Modal */}
+      {showReceivedFeesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto font-sans animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl max-w-2xl w-full p-6 text-slate-100 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+              <div>
+                <h3 className="text-lg font-black text-white">Received Fees Transactions Ledger</h3>
+                <p className="text-xs text-slate-400">List of all fee receipt payments collected from parents</p>
+              </div>
+              <button 
+                onClick={() => setShowReceivedFeesModal(false)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white text-xs font-bold font-mono"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto pr-1">
+              {(() => {
+                // Collect payments
+                const payments = students.flatMap(s => 
+                  (s.paymentHistory || []).map(p => ({
+                    ...p,
+                    studentName: s.name,
+                    admissionNo: s.admissionNo,
+                    className: s.className,
+                    section: s.section
+                  }))
+                ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                
+                if (payments.length === 0) {
+                  return (
+                    <p className="text-slate-400 italic text-center py-10 text-xs">No fee payments have been received or logged yet.</p>
+                  );
+                }
+                
+                return (
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-850 text-slate-400 font-bold">
+                        <th className="py-2.5 px-2">Date</th>
+                        <th className="py-2.5 px-2">Student</th>
+                        <th className="py-2.5 px-2">Receipt No</th>
+                        <th className="py-2.5 px-2">Method</th>
+                        <th className="py-2.5 px-2 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-850">
+                      {payments.map((p, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/30">
+                          <td className="py-2 px-2 text-slate-400 font-mono">{p.date}</td>
+                          <td className="py-2 px-2">
+                            <div className="font-bold text-white">{p.studentName}</div>
+                            <div className="text-[10px] text-slate-400">Class {p.className}-{p.section}</div>
+                          </td>
+                          <td className="py-2 px-2 font-mono text-[10px] text-blue-400">{p.receiptNo}</td>
+                          <td className="py-2 px-2">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                              {p.method}
+                            </span>
+                          </td>
+                          <td className="py-2 px-2 text-right font-bold text-emerald-400">₹{p.amount.toLocaleString('en-IN')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
+            </div>
+            
+            <div className="pt-3 border-t border-slate-800 flex justify-end shrink-0">
+              <button 
+                onClick={() => setShowReceivedFeesModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-bold"
+              >
+                Close Ledger
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Dues Defaulters Modal */}
+      {showPendingDuesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto font-sans animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl max-w-2xl w-full p-6 text-slate-100 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+              <div>
+                <h3 className="text-lg font-black text-white">Pending Fee Dues & Defaulters</h3>
+                <p className="text-xs text-slate-400">List of students with unpaid fees balance</p>
+              </div>
+              <button 
+                onClick={() => setShowPendingDuesModal(false)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white text-xs font-bold font-mono"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto pr-1">
+              {(() => {
+                const defaulters = students
+                  .filter(s => s.fees.pendingAmount > 0)
+                  .sort((a, b) => b.fees.pendingAmount - a.fees.pendingAmount);
+                
+                if (defaulters.length === 0) {
+                  return (
+                    <p className="text-slate-400 italic text-center py-10 text-xs">Congratulations! All student accounts have zero pending dues.</p>
+                  );
+                }
+                
+                return (
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-850 text-slate-400 font-bold">
+                        <th className="py-2.5 px-2">Student Name</th>
+                        <th className="py-2.5 px-2">Class</th>
+                        <th className="py-2.5 px-2">Parent Phone</th>
+                        <th className="py-2.5 px-2 text-right">Pending Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-850">
+                      {defaulters.map((s) => (
+                        <tr key={s.id} className="hover:bg-slate-800/30">
+                          <td className="py-2 px-2">
+                            <div className="font-bold text-white">{s.name}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">{s.admissionNo}</div>
+                          </td>
+                          <td className="py-2 px-2 text-slate-350">Class {s.className}-{s.section}</td>
+                          <td className="py-2 px-2 font-mono text-[10px] text-slate-400">{s.parentPhone}</td>
+                          <td className="py-2 px-2 text-right font-bold text-amber-400 font-mono">₹{s.fees.pendingAmount.toLocaleString('en-IN')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
+            </div>
+            
+            <div className="pt-3 border-t border-slate-800 flex justify-end shrink-0">
+              <button 
+                onClick={() => setShowPendingDuesModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-bold"
+              >
+                Close List
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
