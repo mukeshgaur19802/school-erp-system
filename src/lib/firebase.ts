@@ -34,6 +34,7 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const isConfigured = true;
 
-// Triggering automatic Vercel rebuild for updated env variables
+// Rebuilding Vercel app with new Firebase project: kidzrkidz-b3dfa
+
 
 
