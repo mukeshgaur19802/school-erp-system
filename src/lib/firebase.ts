@@ -33,7 +33,7 @@ if (typeof window !== 'undefined') {
 
 const databaseId = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID && process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID !== ''
   ? process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID
-  : '(default)';
+  : 'default';
 
 export const db = getFirestore(app, databaseId);
 export const auth = getAuth(app);
