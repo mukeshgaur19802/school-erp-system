@@ -9,8 +9,8 @@ export const HomeworkManager: React.FC = () => {
 
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState(currentTeacher?.assignments[0]?.subject || 'Mathematics');
-  const [className, setClassName] = useState(currentTeacher?.assignments[0]?.className || '5');
-  const [section, setSection] = useState(currentTeacher?.assignments[0]?.section || 'A');
+  const [className, setClassName] = useState(() => currentTeacher?.assignments[0]?.className || 'Class 5');
+  const [section, setSection] = useState(() => currentTeacher?.assignments[0]?.section || 'A');
   const [dueDate, setDueDate] = useState('2026-07-22');
   const [description, setDescription] = useState('');
   const [attachmentName, setAttachmentName] = useState('');

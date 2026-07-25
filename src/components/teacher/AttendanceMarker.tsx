@@ -7,8 +7,8 @@ import { CheckSquare, UserCheck, CheckCircle2, XCircle, Clock, Save } from 'luci
 export const AttendanceMarker: React.FC = () => {
   const { students, attendance, markAttendance, currentTeacher } = useERP();
 
-  const [selectedClass, setSelectedClass] = useState('Class 5');
-  const [selectedSection, setSelectedSection] = useState('A');
+  const [selectedClass, setSelectedClass] = useState(() => currentTeacher?.assignments[0]?.className || 'Class 5');
+  const [selectedSection, setSelectedSection] = useState(() => currentTeacher?.assignments[0]?.section || 'A');
 
   // Filter students matching selected class & section
   const classStudents = students.filter(

@@ -235,49 +235,11 @@ function safeSetStorage(keySuffix: string, value: any) {
 }
 
 export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
-    if (typeof window !== 'undefined') {
-      const current = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'USER');
-      if (current) {
-        try { return JSON.parse(current); } catch (e) {}
-      }
-    }
-    return null;
-  });
-
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const current = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'AUTH');
-      if (current) return current === 'true';
-    }
-    return false;
-  });
-
-  const [activeRole, setActiveRoleState] = useState<UserRole>(() => {
-    let user = null;
-    if (typeof window !== 'undefined') {
-      const current = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'USER');
-      if (current) {
-        try { user = JSON.parse(current); } catch (e) {}
-      }
-    }
-    if (user?.role) return user.role;
-    return loadStoredData<UserRole>('ROLE', 'ADMIN');
-  });
-
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [activeRole, setActiveRoleState] = useState<UserRole>('ADMIN');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const current = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'USER');
-      if (current) {
-        try {
-          const user = JSON.parse(current);
-          if (user && user.teacherId) return user.teacherId;
-        } catch (e) {}
-      }
-    }
-    return 'TCH-DEMO-001';
-  });
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('TCH-DEMO-001');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   const [activeModal, setActiveModal] = useState<'NONE' | 'ID_CARD' | 'REPORT_CARD' | 'FEE_RECEIPT' | 'EDIT_STUDENT' | 'EDIT_TEACHER' | 'INSPECT_TEACHER'>('NONE');
@@ -286,67 +248,61 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toasts, setToasts] = useState<ToastAlert[]>([]);
 
   // State initialization
-  const [students, setStudents] = useState<Student[]>(() => {
-    const loaded = loadStoredData<Student[]>('STUDENTS', INITIAL_STUDENTS);
-    return recalculateAlphabeticalRollNumbers(loaded);
-  });
+  const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [homework, setHomework] = useState<Homework[]>([]);
+  const [classwork, setClasswork] = useState<Classwork[]>([]);
+  const [examMarks, setExamMarks] = useState<ExamMark[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [busRoutes, setBusRoutes] = useState<BusRoute[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
+  const [periodConfigs, setPeriodConfigs] = useState<Record<string, PeriodTime[]>>({});
+  const [dailyOverrides, setDailyOverrides] = useState<DailyOverride[]>([]);
+  const [deletedStudents, setDeletedStudents] = useState<DeletedStudent[]>([]);
+  const [deletedTeachers, setDeletedTeachers] = useState<DeletedTeacher[]>([]);
 
-  const [teachers, setTeachers] = useState<Teacher[]>(() => {
-    const loaded = loadStoredData<Teacher[]>('TEACHERS', [DEMO_TEACHER]);
-    if (!loaded.find((t) => t.mobile === '0000000000')) {
-      return [DEMO_TEACHER, ...loaded];
+  // Client-side hydration on mount to prevent Next.js hydration failures
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userStr = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'USER');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user) {
+            setCurrentUser(user);
+            if (user.role) setActiveRoleState(user.role);
+            if (user.teacherId) setSelectedTeacherId(user.teacherId);
+          }
+        } catch (e) {}
+      }
+      const authStr = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'AUTH');
+      if (authStr === 'true') {
+        setIsAuthenticated(true);
+      }
     }
-    return loaded;
-  });
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
-    return loadStoredData<NotificationItem[]>('NOTIFICATIONS', INITIAL_NOTIFICATIONS);
-  });
-
-  const [homework, setHomework] = useState<Homework[]>(() => {
-    return loadStoredData<Homework[]>('HOMEWORK', INITIAL_HOMEWORK);
-  });
-
-  const [classwork, setClasswork] = useState<Classwork[]>(() => {
-    return loadStoredData<Classwork[]>('CLASSWORK', INITIAL_CLASSWORK);
-  });
-
-  const [examMarks, setExamMarks] = useState<ExamMark[]>(() => {
-    return loadStoredData<ExamMark[]>('EXAM_MARKS', INITIAL_EXAM_MARKS);
-  });
-
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => {
-    return loadStoredData<AttendanceRecord[]>('ATTENDANCE', INITIAL_ATTENDANCE);
-  });
-
-  const [busRoutes, setBusRoutes] = useState<BusRoute[]>(() => {
-    return loadStoredData<BusRoute[]>('BUS_ROUTES', INITIAL_BUS_ROUTES);
-  });
-
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(() => {
-    return loadStoredData<CalendarEvent[]>('CALENDAR', INITIAL_CALENDAR_EVENTS);
-  });
-
-  const [timetable, setTimetable] = useState<TimetableSlot[]>(() => {
-    return loadStoredData<TimetableSlot[]>('TIMETABLE', INITIAL_TIMETABLE_SLOTS);
-  });
-
-  const [periodConfigs, setPeriodConfigs] = useState<Record<string, PeriodTime[]>>(() => {
-    return loadStoredData<Record<string, PeriodTime[]>>('PERIOD_CONFIGS', {});
-  });
-
-  const [dailyOverrides, setDailyOverrides] = useState<DailyOverride[]>(() => {
-    return loadStoredData<DailyOverride[]>('DAILY_OVERRIDES', []);
-  });
-
-  const [deletedStudents, setDeletedStudents] = useState<DeletedStudent[]>(() => {
-    return loadStoredData<DeletedStudent[]>('DELETED_STUDENTS', []);
-  });
-
-  const [deletedTeachers, setDeletedTeachers] = useState<DeletedTeacher[]>(() => {
-    return loadStoredData<DeletedTeacher[]>('DELETED_TEACHERS', []);
-  });
-
+    setStudents(recalculateAlphabeticalRollNumbers(loadStoredData<Student[]>('STUDENTS', INITIAL_STUDENTS)));
+    setTeachers(() => {
+      const loaded = loadStoredData<Teacher[]>('TEACHERS', [DEMO_TEACHER]);
+      if (!loaded.find((t) => t.mobile === '0000000000')) {
+        return [DEMO_TEACHER, ...loaded];
+      }
+      return loaded;
+    });
+    setDeletedStudents(loadStoredData<DeletedStudent[]>('DELETED_STUDENTS', []));
+    setDeletedTeachers(loadStoredData<DeletedTeacher[]>('DELETED_TEACHERS', []));
+    setHomework(loadStoredData<Homework[]>('HOMEWORK', INITIAL_HOMEWORK));
+    setClasswork(loadStoredData<Classwork[]>('CLASSWORK', INITIAL_CLASSWORK));
+    setExamMarks(loadStoredData<ExamMark[]>('EXAM_MARKS', INITIAL_EXAM_MARKS));
+    setNotifications(loadStoredData<NotificationItem[]>('NOTIFICATIONS', INITIAL_NOTIFICATIONS));
+    setBusRoutes(loadStoredData<BusRoute[]>('BUS_ROUTES', INITIAL_BUS_ROUTES));
+    setCalendarEvents(loadStoredData<CalendarEvent[]>('CALENDAR', INITIAL_CALENDAR_EVENTS));
+    setTimetable(loadStoredData<TimetableSlot[]>('TIMETABLE', INITIAL_TIMETABLE_SLOTS));
+    setPeriodConfigs(loadStoredData<Record<string, PeriodTime[]>>('PERIOD_CONFIGS', {}));
+    setDailyOverrides(loadStoredData<DailyOverride[]>('DAILY_OVERRIDES', []));
+  }, []);
 
   // Track the hash of the last successfully pushed state to prevent local-push loop conflicts
   const lastPushedHashRef = useRef<string>('');
