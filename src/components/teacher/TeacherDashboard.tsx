@@ -133,6 +133,35 @@ export const TeacherDashboard: React.FC = () => {
     );
   };
 
+  const getTeacherPeriodTime = (tName: string, periodId: string) => {
+    // 1. Find weekly default slot timing
+    const weeklySlot = timetable.find(s => 
+      s.teacherName.toLowerCase() === tName.toLowerCase() && 
+      s.periodId === periodId
+    );
+    if (weeklySlot) {
+      const classKey = weeklySlot.section ? `${weeklySlot.className}-${weeklySlot.section}` : weeklySlot.className;
+      const configs = periodConfigs[classKey] || DEFAULT_PERIODS;
+      const config = configs.find(p => p.periodId === periodId);
+      if (config) return config.time;
+    }
+    
+    // 2. Fallback to daily overrides timing
+    const override = dailyOverrides.find(o => 
+      o.teacherName.toLowerCase() === tName.toLowerCase() && 
+      o.periodId === periodId
+    );
+    if (override) {
+      const classKey = override.section ? `${override.className}-${override.section}` : override.className;
+      const configs = periodConfigs[classKey] || DEFAULT_PERIODS;
+      const config = configs.find(p => p.periodId === periodId);
+      if (config) return config.time;
+    }
+
+    // 3. Fallback to global DEFAULT_PERIODS timing
+    return DEFAULT_PERIODS.find(p => p.periodId === periodId)?.time || '';
+  };
+
   // Primary Assignment for logged-in teacher
   const teacherAssignments = currentTeacher?.assignments || [
     { className: 'Class 8', section: 'A', subject: 'Mathematics', isClassTeacher: true }
@@ -424,14 +453,16 @@ export const TeacherDashboard: React.FC = () => {
               </div>
 
               <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
-                <table className="w-full min-w-[700px] border-collapse table-fixed text-[11px] select-none">
+                <table className="w-full min-w-[850px] border-collapse table-fixed text-[11px] select-none">
                   <thead>
                     <tr className="bg-slate-950/80 text-slate-400 uppercase tracking-wider text-[9px] border-b border-slate-800">
-                      <th className="w-[80px] py-2 text-left pl-3 font-black">DAY</th>
+                      <th className="w-[70px] py-3 text-left pl-3 font-black">DAY</th>
                       {DEFAULT_PERIODS.map(p => (
-                        <th key={p.periodId} className="py-2 text-center border-l border-slate-800/60 font-black">
-                          <div className="text-slate-300 font-bold">{p.name}</div>
-                          <div className="text-[8px] text-slate-500 font-mono mt-0.5">{p.time}</div>
+                        <th key={p.periodId} className="py-2.5 text-center border-l border-slate-800/60 font-black">
+                          <div className="text-slate-200 font-bold">{p.name}</div>
+                          <div className="text-[9px] sm:text-[10px] text-teal-400 font-bold font-mono mt-1 whitespace-nowrap">
+                            {getTeacherPeriodTime(currentTeacher?.name || 'Mrs. Sharma', p.periodId)}
+                          </div>
                         </th>
                       ))}
                     </tr>
@@ -440,7 +471,7 @@ export const TeacherDashboard: React.FC = () => {
                     {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((dayName) => {
                       return (
                         <tr key={dayName} className="border-b border-slate-800/60 hover:bg-slate-800/10 transition-colors">
-                          <td className="py-3 pl-3 font-black text-slate-400 uppercase">
+                          <td className="py-2 pl-3 font-black text-slate-400 uppercase select-none">
                             {dayName.substring(0, 3)}
                           </td>
                           {DEFAULT_PERIODS.map(period => {
@@ -450,11 +481,11 @@ export const TeacherDashboard: React.FC = () => {
                                   <td
                                     key={period.periodId}
                                     rowSpan={6}
-                                    className="bg-slate-950/50 text-center font-bold border-l border-slate-800 align-middle w-[35px]"
+                                    className="bg-slate-950/50 text-center font-bold border-l border-slate-800 align-middle w-[35px] p-1"
                                   >
                                     <div 
-                                      className="flex flex-col items-center justify-center font-black tracking-[0.2em] text-[9px] text-teal-500/80 uppercase h-full py-8" 
-                                      style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}
+                                      className="flex flex-col items-center justify-center font-black tracking-[0.2em] text-[8px] sm:text-[9px] text-teal-500/80 uppercase" 
+                                      style={{ writingMode: 'vertical-rl', textOrientation: 'upright', maxHeight: '100px' }}
                                     >
                                       {period.name}
                                     </div>
@@ -468,16 +499,16 @@ export const TeacherDashboard: React.FC = () => {
                             return (
                               <td 
                                 key={period.periodId} 
-                                className={`p-2.5 border-l border-slate-800/50 text-center ${
+                                className={`p-1.5 border-l border-slate-800/50 text-center align-middle h-[48px] overflow-hidden ${
                                   slot ? 'bg-teal-950/15 text-teal-100' : 'text-slate-600'
                                 }`}
                               >
                                 {slot ? (
-                                  <div>
-                                    <div className="font-extrabold uppercase truncate text-teal-300">
+                                  <div className="space-y-0.5">
+                                    <div className="font-extrabold uppercase truncate text-teal-300 text-[10px] sm:text-[11px]">
                                       {slot.subject}
                                     </div>
-                                    <div className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate">
+                                    <div className="text-[8px] sm:text-[9px] text-slate-400 font-bold truncate">
                                       Class {slot.className}-{slot.section}
                                     </div>
                                   </div>
