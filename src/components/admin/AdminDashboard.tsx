@@ -25,7 +25,9 @@ export const AdminDashboard: React.FC = () => {
     setModalData,
     cloudSyncStatus,
     cloudErrorMsg,
-    resetAllData
+    resetAllData,
+    deleteStudent,
+    deleteTeacher
   } = useERP();
   const [showAdmissionModal, setShowAdmissionModal] = useState(false);
   const [showReceivedFeesModal, setShowReceivedFeesModal] = useState(false);
@@ -322,6 +324,18 @@ export const AdminDashboard: React.FC = () => {
                             >
                               Report
                             </button>
+                            <button
+                              onClick={() => {
+                                const confirmDelete = window.confirm(`Are you absolutely sure you want to delete student ${stu.name}? This will archive their profile record and clear their outstanding balance of ₹${stu.fees.pendingAmount.toLocaleString('en-IN')}.`);
+                                if (confirmDelete) {
+                                  deleteStudent(stu.id);
+                                }
+                              }}
+                              className="px-2 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                              title="Delete Student Record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -406,6 +420,18 @@ export const AdminDashboard: React.FC = () => {
                               className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium border border-slate-700 transition-colors"
                             >
                               View
+                            </button>
+                            <button
+                              onClick={() => {
+                                const confirmDelete = window.confirm(`Are you absolutely sure you want to delete teacher ${tch.name}? This will archive their profile and unassign them from any active classes.`);
+                                if (confirmDelete) {
+                                  deleteTeacher(tch.id);
+                                }
+                              }}
+                              className="px-2 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                              title="Delete Teacher Record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>

@@ -41,7 +41,7 @@ export interface FeePaymentRecord {
   id: string;
   date: string;
   amount: number;
-  method: 'UPI' | 'Credit Card' | 'Debit Card' | 'Netbanking' | 'Cash';
+  method: 'UPI' | 'Bank' | 'Cash';
   receiptNo: string;
   feeType: string;
   status: 'SUCCESS' | 'PENDING' | 'FAILED';
@@ -229,4 +229,12 @@ export interface CalendarEvent {
   category: 'Celebration' | 'Holiday' | 'Exam' | 'Event';
   description: string;
   targetAudience: 'Everyone' | 'Teachers Only' | 'Parents Only';
+}
+
+export interface DeletedStudent extends Student {
+  deletedAt: string;
+}
+
+export interface DeletedTeacher extends Teacher {
+  deletedAt: string;
 }

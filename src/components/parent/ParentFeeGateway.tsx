@@ -20,7 +20,7 @@ export const ParentFeeGateway: React.FC = () => {
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [payAmount, setPayAmount] = useState(currentStudent?.fees.pendingAmount || 1500);
-  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'Credit Card' | 'Debit Card' | 'Netbanking'>('UPI');
+  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'Bank'>('UPI');
   const [feeType, setFeeType] = useState('Term 2 Pending Tuition & Transport Fee');
 
   const handlePaySubmit = (e: React.FormEvent) => {
@@ -234,15 +234,15 @@ export const ParentFeeGateway: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('Credit Card')}
+                    onClick={() => setPaymentMethod('Bank')}
                     className={`p-3 rounded-xl border flex items-center gap-2 transition-all font-semibold ${
-                      paymentMethod === 'Credit Card'
+                      paymentMethod === 'Bank'
                         ? 'bg-amber-500/20 border-amber-500 text-amber-300'
                         : 'bg-slate-800 border-slate-700 text-slate-400'
                     }`}
                   >
                     <CreditCard className="w-4 h-4" />
-                    <span>Credit / Debit Card</span>
+                    <span>Bank Transfer / Card</span>
                   </button>
                 </div>
               </div>

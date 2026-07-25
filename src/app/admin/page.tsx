@@ -16,6 +16,7 @@ import { NotificationCenter } from '../../components/admin/NotificationCenter';
 import { TimetableManager } from '../../components/admin/TimetableManager';
 import { SchoolCalendar } from '../../components/common/SchoolCalendar';
 import { TransportDashboard } from '../../components/transport/TransportDashboard';
+import { ArchiveManager } from '../../components/admin/ArchiveManager';
 
 // Modals
 import { IDCardModal } from '../../components/common/IDCardModal';
@@ -156,6 +157,8 @@ export default function AdminPortal() {
         return <NotificationCenter />;
       case 'transport':
         return <TransportDashboard />;
+      case 'archives':
+        return <ArchiveManager />;
       case 'dashboard':
       default:
         return <AdminDashboard />;

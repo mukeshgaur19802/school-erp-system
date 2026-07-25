@@ -16,7 +16,8 @@ import {
   Award,
   BookMarked,
   Printer,
-  Sparkles
+  Sparkles,
+  Archive
 } from 'lucide-react';
 
 interface NavItem {
@@ -40,6 +41,7 @@ export const Sidebar: React.FC = () => {
           { id: 'calendar', label: 'Celebration Calendar', icon: CalendarIcon },
           { id: 'notifications', label: 'Notifications', icon: Bell },
           { id: 'transport', label: 'Transport & Fleet', icon: Bus },
+          { id: 'archives', label: 'Archived Records', icon: Archive },
         ];
       case 'TEACHER':
         return [

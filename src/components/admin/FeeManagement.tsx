@@ -21,7 +21,7 @@ export const FeeManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [payAmount, setPayAmount] = useState<number>(0);
-  const [payMethod, setPayMethod] = useState<'UPI' | 'Credit Card' | 'Debit Card' | 'Netbanking' | 'Cash'>('UPI');
+  const [payMethod, setPayMethod] = useState<'UPI' | 'Bank' | 'Cash'>('UPI');
   const [feeType, setFeeType] = useState<string>('Tuition & Term Fee');
 
   // 100% Dynamic Calculations from real student state
@@ -289,10 +289,8 @@ export const FeeManagement: React.FC = () => {
                   className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white"
                 >
                   <option value="UPI">UPI / GPay / PhonePe</option>
+                  <option value="Bank">Bank Transfer / Netbanking / Card</option>
                   <option value="Cash">Cash at Counter</option>
-                  <option value="Credit Card">Credit Card</option>
-                  <option value="Debit Card">Debit Card</option>
-                  <option value="Netbanking">Netbanking</option>
                 </select>
               </div>
 

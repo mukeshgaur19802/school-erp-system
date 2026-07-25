@@ -6,6 +6,8 @@ import {
   UserSession,
   Student,
   Teacher,
+  DeletedStudent,
+  DeletedTeacher,
   AttendanceRecord,
   Homework,
   Classwork,
@@ -105,6 +107,8 @@ interface ERPContextType {
 
   students: Student[];
   teachers: Teacher[];
+  deletedStudents: DeletedStudent[];
+  deletedTeachers: DeletedTeacher[];
   notifications: NotificationItem[];
   homework: Homework[];
   classwork: Classwork[];
@@ -120,15 +124,17 @@ interface ERPContextType {
   // Actions
   addStudent: (data: Omit<Student, 'id' | 'admissionNo' | 'paymentHistory'> & { customAdmissionNo?: string }) => void;
   editStudent: (id: string, updatedData: Partial<Student>) => void;
+  deleteStudent: (id: string) => void;
   addTeacher: (data: Omit<Teacher, 'id' | 'joinDate'>) => void;
   editTeacher: (id: string, updatedData: Partial<Teacher>) => void;
+  deleteTeacher: (id: string) => void;
   resetTeacherPassword: (teacherId: string, newPass: string) => void;
   resetStudentPassword: (studentId: string, newPass: string) => void;
   markAttendance: (records: { studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE'; remarks?: string }[], className: string, section: string) => void;
   addHomework: (data: Omit<Homework, 'id' | 'assignedDate'>) => void;
   addClasswork: (data: Omit<Classwork, 'id' | 'date'>) => void;
   addExamMarks: (data: Omit<ExamMark, 'id'>[]) => void;
-  makeFeePayment: (studentId: string, amount: number, method: 'UPI' | 'Credit Card' | 'Debit Card' | 'Netbanking' | 'Cash', feeType: string) => void;
+  makeFeePayment: (studentId: string, amount: number, method: 'UPI' | 'Bank' | 'Cash', feeType: string) => void;
   sendNotification: (data: Omit<NotificationItem, 'id' | 'createdAt' | 'isRead'>) => void;
   markNotificationRead: (id: string) => void;
   addCalendarEvent: (event: Omit<CalendarEvent, 'id'>) => void;
@@ -322,6 +328,14 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return loadStoredData<DailyOverride[]>('DAILY_OVERRIDES', []);
   });
 
+  const [deletedStudents, setDeletedStudents] = useState<DeletedStudent[]>(() => {
+    return loadStoredData<DeletedStudent[]>('DELETED_STUDENTS', []);
+  });
+
+  const [deletedTeachers, setDeletedTeachers] = useState<DeletedTeacher[]>(() => {
+    return loadStoredData<DeletedTeacher[]>('DELETED_TEACHERS', []);
+  });
+
 
   // Track the hash of the last successfully pushed state to prevent local-push loop conflicts
   const lastPushedHashRef = useRef<string>('');
@@ -347,6 +361,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
           if (cloudData.students) setStudents(recalculateAlphabeticalRollNumbers(cloudData.students));
           if (cloudData.teachers) setTeachers(cloudData.teachers);
+          if (cloudData.deletedStudents) setDeletedStudents(cloudData.deletedStudents);
+          if (cloudData.deletedTeachers) setDeletedTeachers(cloudData.deletedTeachers);
           if (cloudData.homework) setHomework(cloudData.homework);
           if (cloudData.classwork) setClasswork(cloudData.classwork);
           if (cloudData.timetable) setTimetable(cloudData.timetable);
@@ -366,11 +382,12 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // 2. Debounced Pushes to Cloud Database (Firestore / REST Fallback)
   useEffect(() => {
     const payload = {
       students,
       teachers,
+      deletedStudents,
+      deletedTeachers,
       homework,
       classwork,
       timetable,
@@ -404,7 +421,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 1500);
 
     return () => clearTimeout(timeoutId);
-  }, [students, teachers, homework, classwork, timetable, calendarEvents, notifications, busRoutes, attendance, periodConfigs, dailyOverrides]);
+  }, [students, teachers, deletedStudents, deletedTeachers, homework, classwork, timetable, calendarEvents, notifications, busRoutes, attendance, periodConfigs, dailyOverrides]);
 
   // Sync session states to sessionStorage, and backing up data tables to localStorage
   useEffect(() => {
@@ -430,8 +447,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeSetStorage('TIMETABLE', timetable);
       safeSetStorage('PERIOD_CONFIGS', periodConfigs);
       safeSetStorage('DAILY_OVERRIDES', dailyOverrides);
+      safeSetStorage('DELETED_STUDENTS', deletedStudents);
+      safeSetStorage('DELETED_TEACHERS', deletedTeachers);
     }
-  }, [isAuthenticated, currentUser, activeRole, students, teachers, notifications, homework, classwork, examMarks, attendance, busRoutes, calendarEvents, timetable, periodConfigs, dailyOverrides]);
+  }, [isAuthenticated, currentUser, activeRole, students, teachers, deletedStudents, deletedTeachers, notifications, homework, classwork, examMarks, attendance, busRoutes, calendarEvents, timetable, periodConfigs, dailyOverrides]);
 
   const login = (role: UserRole, userDetails: { email?: string; mobile?: string; name: string; teacherId?: string }) => {
     setIsAuthenticated(true);
@@ -551,6 +570,64 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Teacher Profile Updated', 'Updated teacher details & assignments.', 'success');
   };
 
+  const deleteStudent = (id: string) => {
+    const studentToDelete = students.find(s => s.id === id);
+    if (!studentToDelete) return;
+
+    // 1. Clear outstanding balance for deleted archive
+    const archivedStudent: DeletedStudent = {
+      ...studentToDelete,
+      deletedAt: new Date().toISOString(),
+      fees: {
+        ...studentToDelete.fees,
+        pendingAmount: 0,
+        paidAmount: studentToDelete.fees.totalFee
+      }
+    };
+
+    // 2. Add to deleted archive list
+    setDeletedStudents(prev => [...prev, archivedStudent]);
+
+    // 3. Remove from active students
+    setStudents(prev => {
+      const filtered = prev.filter(s => s.id !== id);
+      return recalculateAlphabeticalRollNumbers(filtered);
+    });
+
+    addToast('Student Account Deleted', `${studentToDelete.name}'s record was archived and their outstanding balance cleared.`, 'success');
+  };
+
+  const deleteTeacher = (id: string) => {
+    const teacherToDelete = teachers.find(t => t.id === id);
+    if (!teacherToDelete) return;
+
+    const archivedTeacher: DeletedTeacher = {
+      ...teacherToDelete,
+      deletedAt: new Date().toISOString()
+    };
+
+    // 1. Add to deleted archive list
+    setDeletedTeachers(prev => [...prev, archivedTeacher]);
+
+    // 2. Remove from active teachers list
+    setTeachers(prev => prev.filter(t => t.id !== id));
+
+    // 3. Unassign from timetable slots / daily overrides
+    setTimetable(prev => prev.map(slot => 
+      slot.teacherName.toLowerCase() === teacherToDelete.name.toLowerCase()
+        ? { ...slot, teacherName: 'Unassigned' }
+        : slot
+    ));
+
+    setDailyOverrides(prev => prev.map(override => 
+      override.teacherName.toLowerCase() === teacherToDelete.name.toLowerCase()
+        ? { ...override, teacherName: 'Unassigned' }
+        : override
+    ));
+
+    addToast('Teacher Account Deleted', `${teacherToDelete.name}'s record has been archived.`, 'success');
+  };
+
   const resetTeacherPassword = (teacherId: string, newPass: string) => {
     setTeachers((prev) =>
       prev.map((t) => (t.id === teacherId ? { ...t, password: newPass } : t))
@@ -638,7 +715,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const makeFeePayment = (
     studentId: string,
     amount: number,
-    method: 'UPI' | 'Credit Card' | 'Debit Card' | 'Netbanking' | 'Cash',
+    method: 'UPI' | 'Bank' | 'Cash',
     feeType: string
   ) => {
     const receiptNo = 'KRK-RCP-' + Math.floor(1000 + Math.random() * 9000);
@@ -813,6 +890,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setStudents([]);
     setTeachers([DEMO_TEACHER]);
+    setDeletedStudents([]);
+    setDeletedTeachers([]);
     setNotifications([]);
     setHomework([]);
     setClasswork([]);
@@ -843,6 +922,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedTeacherId,
         students,
         teachers,
+        deletedStudents,
+        deletedTeachers,
         notifications,
         homework,
         classwork,
@@ -856,8 +937,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dailyOverrides,
         addStudent,
         editStudent,
+        deleteStudent,
         addTeacher,
         editTeacher,
+        deleteTeacher,
         resetTeacherPassword,
         resetStudentPassword,
         markAttendance,

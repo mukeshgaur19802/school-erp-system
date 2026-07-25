@@ -84,6 +84,18 @@ export const TimetableManager: React.FC = () => {
   // Active periods config for the selected class
   const activePeriods = periodConfigs[classKey] || DEFAULT_PERIODS;
 
+  const getVisiblePeriods = (periods: PeriodTime[]) => {
+    const reversed = [...periods].reverse();
+    const firstNonEmptyFromEndIdx = reversed.findIndex(p => p.time && p.time.trim() !== '');
+    if (firstNonEmptyFromEndIdx === -1) {
+      // Fallback: show first 6 periods
+      return periods.slice(0, 6);
+    }
+    return periods.slice(0, periods.length - firstNonEmptyFromEndIdx);
+  };
+
+  const visiblePeriods = getVisiblePeriods(activePeriods);
+
   // Find class teacher
   const classTeacher = teachers.find(t => 
     t.assignments.some(a => a.className === className && a.section === section && a.isClassTeacher)
@@ -480,7 +492,7 @@ export const TimetableManager: React.FC = () => {
                 {/* Headers Row */}
                 <tr className="bg-slate-950/60 text-slate-400 uppercase tracking-wider text-[9px] border-b border-slate-800">
                   <th className="w-[100px] py-3 text-left pl-4 font-black">DAY</th>
-                  {activePeriods.map((period) => (
+                  {visiblePeriods.map((period) => (
                     <th key={period.periodId} className="py-3 text-center border-l border-slate-800/50 font-black">
                       <div className="font-extrabold text-slate-200">{period.name}</div>
                       <div className="font-semibold text-slate-500 font-mono mt-0.5">{period.time}</div>
@@ -508,7 +520,7 @@ export const TimetableManager: React.FC = () => {
                       </td>
 
                       {/* Period Cells */}
-                      {activePeriods.map((period) => {
+                      {visiblePeriods.map((period) => {
                         const { weeklySlot, override } = getCellDetails(
                           dayName as any, 
                           period.periodId

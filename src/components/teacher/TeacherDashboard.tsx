@@ -162,6 +162,22 @@ export const TeacherDashboard: React.FC = () => {
     return DEFAULT_PERIODS.find(p => p.periodId === periodId)?.time || '';
   };
 
+  const getTeacherVisiblePeriods = () => {
+    const tName = currentTeacher?.name || 'Mrs. Sharma';
+    const periodsWithTimings = DEFAULT_PERIODS.map(p => {
+      const time = getTeacherPeriodTime(tName, p.periodId);
+      return { ...p, time };
+    });
+
+    const reversed = [...periodsWithTimings].reverse();
+    const firstNonEmptyFromEndIdx = reversed.findIndex(p => p.time && p.time.trim() !== '');
+    if (firstNonEmptyFromEndIdx === -1) {
+      // Fallback: show first 6 periods
+      return DEFAULT_PERIODS.slice(0, 6);
+    }
+    return DEFAULT_PERIODS.slice(0, DEFAULT_PERIODS.length - firstNonEmptyFromEndIdx);
+  };
+
   // Primary Assignment for logged-in teacher
   const teacherAssignments = currentTeacher?.assignments || [
     { className: 'Class 8', section: 'A', subject: 'Mathematics', isClassTeacher: true }
@@ -453,76 +469,81 @@ export const TeacherDashboard: React.FC = () => {
               </div>
 
               <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
-                <table className="w-full min-w-[850px] border-collapse table-fixed text-[11px] select-none">
-                  <thead>
-                    <tr className="bg-slate-950/80 text-slate-400 uppercase tracking-wider text-[9px] border-b border-slate-800">
-                      <th className="w-[70px] py-3 text-left pl-3 font-black">DAY</th>
-                      {DEFAULT_PERIODS.map(p => (
-                        <th key={p.periodId} className="py-2.5 text-center border-l border-slate-800/60 font-black">
-                          <div className="text-slate-200 font-bold">{p.name}</div>
-                          <div className="text-[9px] sm:text-[10px] text-teal-400 font-bold font-mono mt-1 whitespace-nowrap">
-                            {getTeacherPeriodTime(currentTeacher?.name || 'Mrs. Sharma', p.periodId)}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((dayName) => {
-                      return (
-                        <tr key={dayName} className="border-b border-slate-800/60 hover:bg-slate-800/10 transition-colors">
-                          <td className="py-2 pl-3 font-black text-slate-400 uppercase select-none">
-                            {dayName.substring(0, 3)}
-                          </td>
-                          {DEFAULT_PERIODS.map(period => {
-                            if (period.isBreak) {
-                              if (dayName === 'Monday') {
+                {(() => {
+                  const teacherVisiblePeriods = getTeacherVisiblePeriods();
+                  return (
+                    <table className="w-full min-w-[850px] border-collapse table-fixed text-[11px] select-none">
+                      <thead>
+                        <tr className="bg-slate-950/80 text-slate-400 uppercase tracking-wider text-[9px] border-b border-slate-800">
+                          <th className="w-[70px] py-3 text-left pl-3 font-black">DAY</th>
+                          {teacherVisiblePeriods.map(p => (
+                            <th key={p.periodId} className="py-2.5 text-center border-l border-slate-800/60 font-black">
+                              <div className="text-slate-200 font-bold">{p.name}</div>
+                              <div className="text-[9px] sm:text-[10px] text-teal-400 font-bold font-mono mt-1 whitespace-nowrap">
+                                {getTeacherPeriodTime(currentTeacher?.name || 'Mrs. Sharma', p.periodId)}
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((dayName) => {
+                          return (
+                            <tr key={dayName} className="border-b border-slate-800/60 hover:bg-slate-800/10 transition-colors">
+                              <td className="py-2 pl-3 font-black text-slate-400 uppercase select-none">
+                                {dayName.substring(0, 3)}
+                              </td>
+                              {teacherVisiblePeriods.map(period => {
+                                if (period.isBreak) {
+                                  if (dayName === 'Monday') {
+                                    return (
+                                      <td
+                                        key={period.periodId}
+                                        rowSpan={6}
+                                        className="bg-slate-950/50 text-center font-bold border-l border-slate-800 align-middle w-[35px] p-1"
+                                      >
+                                        <div 
+                                          className="flex flex-col items-center justify-center font-black tracking-[0.2em] text-[8px] sm:text-[9px] text-teal-500/80 uppercase" 
+                                          style={{ writingMode: 'vertical-rl', textOrientation: 'upright', maxHeight: '100px' }}
+                                        >
+                                          {period.name}
+                                        </div>
+                                      </td>
+                                    );
+                                  }
+                                  return null;
+                                }
+
+                                const slot = getTeacherWeeklySlot(currentTeacher?.name || 'Mrs. Sharma', dayName, period.periodId);
                                 return (
-                                  <td
-                                    key={period.periodId}
-                                    rowSpan={6}
-                                    className="bg-slate-950/50 text-center font-bold border-l border-slate-800 align-middle w-[35px] p-1"
+                                  <td 
+                                    key={period.periodId} 
+                                    className={`p-1.5 border-l border-slate-800/50 text-center align-middle h-[48px] overflow-hidden ${
+                                      slot ? 'bg-teal-950/15 text-teal-100' : 'text-slate-600'
+                                    }`}
                                   >
-                                    <div 
-                                      className="flex flex-col items-center justify-center font-black tracking-[0.2em] text-[8px] sm:text-[9px] text-teal-500/80 uppercase" 
-                                      style={{ writingMode: 'vertical-rl', textOrientation: 'upright', maxHeight: '100px' }}
-                                    >
-                                      {period.name}
-                                    </div>
+                                    {slot ? (
+                                      <div className="space-y-0.5">
+                                        <div className="font-extrabold uppercase truncate text-teal-300 text-[10px] sm:text-[11px]">
+                                          {slot.subject}
+                                        </div>
+                                        <div className="text-[8px] sm:text-[9px] text-slate-400 font-bold truncate">
+                                          Class {slot.className}-{slot.section}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-700 italic">-</span>
+                                    )}
                                   </td>
                                 );
-                              }
-                              return null;
-                            }
-
-                            const slot = getTeacherWeeklySlot(currentTeacher?.name || 'Mrs. Sharma', dayName, period.periodId);
-                            return (
-                              <td 
-                                key={period.periodId} 
-                                className={`p-1.5 border-l border-slate-800/50 text-center align-middle h-[48px] overflow-hidden ${
-                                  slot ? 'bg-teal-950/15 text-teal-100' : 'text-slate-600'
-                                }`}
-                              >
-                                {slot ? (
-                                  <div className="space-y-0.5">
-                                    <div className="font-extrabold uppercase truncate text-teal-300 text-[10px] sm:text-[11px]">
-                                      {slot.subject}
-                                    </div>
-                                    <div className="text-[8px] sm:text-[9px] text-slate-400 font-bold truncate">
-                                      Class {slot.className}-{slot.section}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-[10px] text-slate-700 italic">-</span>
-                                )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  );
+                })()}
               </div>
             </div>
 
