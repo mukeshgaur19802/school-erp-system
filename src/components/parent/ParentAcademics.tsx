@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
-import { BookMarked, CheckCircle2, Award, Calendar, BookOpen, Clock, Printer, Sparkles } from 'lucide-react';
+import { BookMarked, CheckCircle2, Award, Calendar, BookOpen, Clock, Printer, Sparkles, Paperclip } from 'lucide-react';
 
 export const ParentAcademics: React.FC = () => {
   const { currentStudent, attendance, homework, classwork, examMarks, timetable, setActiveModal, setModalData } = useERP();
@@ -84,6 +84,27 @@ export const ParentAcademics: React.FC = () => {
                   </div>
                   <h4 className="font-bold text-sm text-white">{hw.title}</h4>
                   <p className="text-xs text-slate-300">{hw.description}</p>
+                  {hw.attachmentUrl && (hw.attachmentUrl.startsWith('data:image/') || hw.attachmentUrl.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? (
+                    <div className="mt-2 rounded-xl overflow-hidden border border-slate-700 max-w-full shadow-md bg-slate-950">
+                      <img src={hw.attachmentUrl} alt="Attached Worksheet" className="w-full h-auto max-h-48 object-cover" />
+                      {hw.attachmentName && (
+                        <div className="p-2 bg-slate-900 border-t border-slate-700/60 text-[10px] text-slate-400 flex items-center justify-between">
+                          <span className="truncate max-w-[150px]">{hw.attachmentName}</span>
+                          <a href={hw.attachmentUrl} download={hw.attachmentName} className="text-cyan-400 font-bold hover:underline shrink-0">Download</a>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    hw.attachmentName && (
+                      <div className="p-2 rounded-xl bg-slate-900/80 border border-slate-700/60 inline-flex items-center gap-1.5 text-xs text-cyan-300 mt-1">
+                        <Paperclip className="w-3.5 h-3.5" />
+                        <span className="truncate">{hw.attachmentName}</span>
+                        {hw.attachmentUrl && hw.attachmentUrl !== '#' && (
+                          <a href={hw.attachmentUrl} download={hw.attachmentName} className="ml-2 text-cyan-400 font-bold hover:underline">Download</a>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               ))}
             </div>

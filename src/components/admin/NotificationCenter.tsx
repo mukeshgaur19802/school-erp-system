@@ -6,7 +6,7 @@ import { Bell, Send, Users, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-r
 import { NotificationItem } from '../../types';
 
 export const NotificationCenter: React.FC = () => {
-  const { notifications, sendNotification, activeRole } = useERP();
+  const { notifications, sendNotification, activeRole, currentStudent, selectedStudentId } = useERP();
 
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -33,6 +33,18 @@ export const NotificationCenter: React.FC = () => {
   };
 
   if (activeRole === 'PARENT') {
+    const parentNotifs = notifications.filter((n) => {
+      if (n.targetAudience === 'Everyone') return true;
+      if (n.targetAudience === 'Selected Classes') {
+        const studentClassKey = currentStudent ? `${currentStudent.className}-${currentStudent.section}` : '';
+        return n.targetClassSection === studentClassKey;
+      }
+      if (n.targetAudience === 'Individual Parents') {
+        return n.targetStudentId === selectedStudentId;
+      }
+      return false;
+    });
+
     return (
       <div className="space-y-6 text-slate-100 animate-fade-in">
         {/* Simple Parent Header */}
@@ -49,10 +61,10 @@ export const NotificationCenter: React.FC = () => {
         {/* Notices Feed */}
         <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
           <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-            {notifications.length === 0 ? (
+            {parentNotifs.length === 0 ? (
               <p className="text-slate-400 text-xs italic text-center py-10">No active notices or alerts for your class.</p>
             ) : (
-              notifications.map((n) => (
+              parentNotifs.map((n) => (
                 <div
                   key={n.id}
                   className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-2"
@@ -71,6 +83,59 @@ export const NotificationCenter: React.FC = () => {
 
                   <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-700/40">
                     Sender: {n.senderName}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeRole === 'TEACHER') {
+    const teacherNotifs = notifications.filter((n) => {
+      return n.targetAudience === 'Everyone' || n.targetAudience === 'Teachers Only';
+    });
+
+    return (
+      <div className="space-y-6 text-slate-100 animate-fade-in">
+        {/* Simple Teacher Header */}
+        <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl">
+          <h2 className="text-xl font-black text-white flex items-center gap-2">
+            <Bell className="w-5 h-5 text-indigo-400 animate-pulse" />
+            Teacher Announcements & Alerts
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Official announcements, notices, and staff alerts broadcasted by the administration.
+          </p>
+        </div>
+
+        {/* Notices Feed */}
+        <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+            {teacherNotifs.length === 0 ? (
+              <p className="text-slate-400 text-xs italic text-center py-10">No active alerts or staff notices.</p>
+            ) : (
+              teacherNotifs.map((n) => (
+                <div
+                  key={n.id}
+                  className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      {n.category}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {new Date(n.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <h4 className="font-bold text-sm text-white">{n.title}</h4>
+                  <p className="text-xs text-slate-300 leading-relaxed">{n.message}</p>
+
+                  <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-700/40">
+                    Sender: {n.senderName} ({n.senderRole})
                   </div>
                 </div>
               ))

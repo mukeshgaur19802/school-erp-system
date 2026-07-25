@@ -414,6 +414,8 @@ export default function MobileAppPortal() {
             return <MarksEntry />;
           case 'calendar':
             return <SchoolCalendar />;
+          case 'notifications':
+            return <NotificationCenter />;
           case 'dashboard':
           default:
             return <TeacherDashboard />;
@@ -511,6 +513,13 @@ export default function MobileAppPortal() {
                 <Calendar className="w-4 h-4" />
                 <span className="text-[8px] font-bold">Events</span>
               </button>
+              <button 
+                onClick={() => setActiveTab('notifications')}
+                className={`flex flex-col items-center gap-1 ${activeTab === 'notifications' ? 'text-teal-400' : 'text-slate-500'}`}
+              >
+                <Bell className="w-4 h-4" />
+                <span className="text-[8px] font-bold">Alerts</span>
+              </button>
             </>
           )}
 
@@ -587,7 +596,7 @@ export default function MobileAppPortal() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Desktop view simulator wrapper */}
-      <div className="w-full max-w-7xl mx-auto px-6 py-6 md:py-12 flex flex-col md:flex-row items-center justify-center gap-12 relative z-10">
+      <div className="w-full max-w-7xl mx-auto p-0 md:px-6 md:py-12 flex flex-col md:flex-row items-center justify-center gap-12 relative z-10">
         
         {/* Left pane: Displayed ONLY on large screens */}
         <div className="hidden md:flex flex-col max-w-md space-y-6 text-left shrink">
@@ -630,7 +639,7 @@ export default function MobileAppPortal() {
         </div>
 
         {/* Right pane: The PWA Simulator (framed on desktop, full-width on mobile) */}
-        <div className="w-full max-w-md md:w-[380px] md:h-[760px] md:rounded-[44px] md:border-[10px] md:border-slate-900 md:shadow-2xl relative bg-slate-950 flex flex-col justify-between overflow-hidden shrink-0 md:ring-4 md:ring-slate-800/40 select-none">
+        <div className="w-full h-[100dvh] md:w-[380px] md:h-[760px] md:max-w-md md:rounded-[44px] md:border-[10px] md:border-slate-900 md:shadow-2xl relative bg-slate-950 flex flex-col justify-between overflow-hidden shrink-0 md:ring-4 md:ring-slate-800/40 select-none">
           {/* Virtual Top Notch/Speaker (Simulated ONLY on desktop) */}
           <div className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2 w-32 h-5 bg-slate-900 rounded-b-2xl z-50">
             <div className="w-10 h-1 bg-slate-850 rounded-full mx-auto mt-1" />

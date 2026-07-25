@@ -130,7 +130,7 @@ interface ERPContextType {
   deleteTeacher: (id: string) => void;
   resetTeacherPassword: (teacherId: string, newPass: string) => void;
   resetStudentPassword: (studentId: string, newPass: string) => void;
-  markAttendance: (records: { studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE'; remarks?: string }[], className: string, section: string) => void;
+  markAttendance: (records: { studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE'; remarks?: string }[], className: string, section: string, date: string) => void;
   addHomework: (data: Omit<Homework, 'id' | 'assignedDate'>) => void;
   addClasswork: (data: Omit<Classwork, 'id' | 'date'>) => void;
   addExamMarks: (data: Omit<ExamMark, 'id'>[]) => void;
@@ -266,7 +266,18 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('TCH-DEMO-001');
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const current = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'USER');
+      if (current) {
+        try {
+          const user = JSON.parse(current);
+          if (user && user.teacherId) return user.teacherId;
+        } catch (e) {}
+      }
+    }
+    return 'TCH-DEMO-001';
+  });
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   const [activeModal, setActiveModal] = useState<'NONE' | 'ID_CARD' | 'REPORT_CARD' | 'FEE_RECEIPT' | 'EDIT_STUDENT' | 'EDIT_TEACHER' | 'INSPECT_TEACHER'>('NONE');
@@ -342,6 +353,30 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'CONNECTED' | 'ERROR' | 'SYNCING' | 'LOCAL_ONLY'>('LOCAL_ONLY');
   const [cloudErrorMsg, setCloudErrorMsg] = useState<string>('');
+
+  // Request notification permission for Web Push alerts
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  const triggerPushNotification = (title: string, message: string) => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        try {
+          new Notification(title, {
+            body: message,
+            icon: '/logo.jpg',
+          });
+        } catch (e) {
+          console.error("Failed to trigger native Notification:", e);
+        }
+      }
+    }
+  };
 
   // 1. Real-Time onSnapshot Firestore Listener for immediate cross-device sync
   useEffect(() => {
@@ -645,14 +680,14 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const markAttendance = (
     records: { studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE'; remarks?: string }[],
     className: string,
-    section: string
+    section: string,
+    date: string
   ) => {
-    const todayStr = new Date().toISOString().split('T')[0];
     setAttendance((prev) => {
-      const filtered = prev.filter(r => !(r.date === todayStr && r.className === className && r.section === section));
+      const filtered = prev.filter(r => !(r.date === date && r.className === className && r.section === section));
       const newEntries: AttendanceRecord[] = records.map((rec) => ({
         id: 'ATT-' + Math.random().toString(36).substring(2, 7),
-        date: todayStr,
+        date: date,
         studentId: rec.studentId,
         className,
         section,
@@ -661,7 +696,15 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }));
       return [...newEntries, ...filtered];
     });
-    addToast('Attendance Saved', `Marked attendance for Class ${className}-${section}.`, 'success');
+    addToast('Attendance Saved', `Marked attendance for ${date} (Class ${className}-${section}).`, 'success');
+
+    // Push notification for the class attendance
+    const present = records.filter(r => r.status === 'PRESENT').length;
+    const total = records.length;
+    triggerPushNotification(
+      `Attendance Marked: Class ${className}-${section}`,
+      `Roster updated for ${date}. Present: ${present}/${total} students.`
+    );
   };
 
   const addHomework = (data: Omit<Homework, 'id' | 'assignedDate'>) => {
@@ -689,6 +732,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications((prev) => [hwNotif, ...prev]);
 
     addToast('Homework Posted', `Published homework for Class ${data.className}-${data.section}.`, 'success');
+    triggerPushNotification(
+      `${data.subject} Homework Posted`,
+      `Class ${data.className}-${data.section}: "${data.title}" by ${data.teacherName}. Due: ${data.dueDate}`
+    );
   };
 
   const addClasswork = (data: Omit<Classwork, 'id' | 'date'>) => {
@@ -767,6 +814,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setNotifications((prev) => [newNotif, ...prev]);
     addToast('Announcement Broadcasted', `Sent "${data.title}" to ${data.targetAudience}.`, 'success');
+    triggerPushNotification(`📢 Announcement: ${data.title}`, data.message);
   };
 
   const markNotificationRead = (id: string) => {

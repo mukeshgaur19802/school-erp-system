@@ -13,7 +13,8 @@ export const HomeworkManager: React.FC = () => {
   const [section, setSection] = useState(currentTeacher?.assignments[0]?.section || 'A');
   const [dueDate, setDueDate] = useState('2026-07-22');
   const [description, setDescription] = useState('');
-  const [attachmentName, setAttachmentName] = useState('Exercise_Worksheet.pdf');
+  const [attachmentName, setAttachmentName] = useState('');
+  const [attachmentUrl, setAttachmentUrl] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,11 +29,13 @@ export const HomeworkManager: React.FC = () => {
       dueDate,
       description,
       attachmentName,
-      attachmentUrl: '#',
+      attachmentUrl: attachmentUrl || '#',
     });
 
     setTitle('');
     setDescription('');
+    setAttachmentName('');
+    setAttachmentUrl('');
   };
 
   return (
@@ -137,13 +140,37 @@ export const HomeworkManager: React.FC = () => {
 
             <div>
               <label className="block font-medium text-slate-300 mb-1">Attach Notes / PDF / Image Worksheet</label>
-              <div className="flex items-center gap-2">
+              <div className="space-y-2">
                 <input
-                  type="text"
-                  value={attachmentName}
-                  onChange={(e) => setAttachmentName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setAttachmentName(file.name);
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      if (event.target?.result) {
+                        setAttachmentUrl(event.target.result as string);
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                  className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 file:cursor-pointer"
                 />
+                {attachmentName && (
+                  <div className="text-[10px] text-cyan-300 font-bold bg-slate-800 p-2 rounded-xl border border-slate-700/60 flex items-center justify-between">
+                    <span className="truncate max-w-[180px]">{attachmentName}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => { setAttachmentName(''); setAttachmentUrl(''); }}
+                      className="text-rose-400 hover:text-rose-300 font-bold cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -185,11 +212,26 @@ export const HomeworkManager: React.FC = () => {
                 <h4 className="font-bold text-sm text-white">{hw.title}</h4>
                 <p className="text-xs text-slate-300 leading-relaxed">{hw.description}</p>
 
-                {hw.attachmentName && (
-                  <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-700/60 inline-flex items-center gap-2 text-xs text-cyan-300">
-                    <Paperclip className="w-3.5 h-3.5" />
-                    <span>{hw.attachmentName}</span>
+                {hw.attachmentUrl && (hw.attachmentUrl.startsWith('data:image/') || hw.attachmentUrl.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? (
+                  <div className="mt-2 rounded-xl overflow-hidden border border-slate-700 max-w-xs shadow-md bg-slate-950">
+                    <img src={hw.attachmentUrl} alt="Attached Worksheet" className="w-full h-auto max-h-48 object-cover" />
+                    {hw.attachmentName && (
+                      <div className="p-2 bg-slate-900 border-t border-slate-700/60 text-[10px] text-slate-400 flex items-center justify-between">
+                        <span className="truncate max-w-[150px]">{hw.attachmentName}</span>
+                        <a href={hw.attachmentUrl} download={hw.attachmentName} className="text-cyan-400 font-bold hover:underline shrink-0">Download</a>
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  hw.attachmentName && (
+                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-700/60 inline-flex items-center gap-2 text-xs text-cyan-300">
+                      <Paperclip className="w-3.5 h-3.5" />
+                      <span>{hw.attachmentName}</span>
+                      {hw.attachmentUrl && hw.attachmentUrl !== '#' && (
+                        <a href={hw.attachmentUrl} download={hw.attachmentName} className="ml-2 text-cyan-400 font-bold hover:underline">Download</a>
+                      )}
+                    </div>
+                  )
                 )}
 
                 <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-700/40 flex items-center justify-between">

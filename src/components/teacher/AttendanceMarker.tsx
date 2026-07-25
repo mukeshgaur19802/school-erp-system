@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { CheckSquare, UserCheck, CheckCircle2, XCircle, Clock, Save } from 'lucide-react';
 
 export const AttendanceMarker: React.FC = () => {
-  const { students, markAttendance, currentTeacher } = useERP();
+  const { students, attendance, markAttendance, currentTeacher } = useERP();
 
   const [selectedClass, setSelectedClass] = useState('Class 5');
   const [selectedSection, setSelectedSection] = useState('A');
@@ -23,6 +23,20 @@ export const AttendanceMarker: React.FC = () => {
     return initial;
   });
 
+  const [attDate, setAttDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+  // Dynamically load historical attendance when date, class or section changes
+  useEffect(() => {
+    const initial: { [studentId: string]: 'PRESENT' | 'ABSENT' | 'LATE' } = {};
+    classStudents.forEach((s) => {
+      const record = attendance.find(
+        (r) => r.studentId === s.id && r.date === attDate
+      );
+      initial[s.id] = record ? record.status : 'PRESENT';
+    });
+    setAttendanceState(initial);
+  }, [attDate, selectedClass, selectedSection, attendance, students]);
+
   const handleStatusChange = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE') => {
     setAttendanceState((prev) => ({ ...prev, [studentId]: status }));
   };
@@ -33,7 +47,7 @@ export const AttendanceMarker: React.FC = () => {
       status: attendanceState[s.id] || 'PRESENT',
     }));
 
-    markAttendance(records, selectedClass, selectedSection);
+    markAttendance(records, selectedClass, selectedSection, attDate);
   };
 
   const presentCount = classStudents.filter((s) => attendanceState[s.id] === 'PRESENT').length;
@@ -58,7 +72,15 @@ export const AttendanceMarker: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-800 p-1.5 rounded-2xl border border-slate-700 text-xs">
+            <div className="flex flex-wrap items-center gap-2 bg-slate-800 p-1.5 rounded-2xl border border-slate-700 text-xs">
+              <label className="text-slate-400 font-semibold px-2">Date:</label>
+              <input
+                type="date"
+                value={attDate}
+                onChange={(e) => setAttDate(e.target.value)}
+                className="bg-slate-900 text-white px-2 py-0.5 rounded-xl border border-slate-700/80 focus:outline-none focus:border-emerald-500 font-semibold"
+              />
+
               <label className="text-slate-400 font-medium px-2">Class:</label>
               <select
                 value={selectedClass}
@@ -178,6 +200,19 @@ export const AttendanceMarker: React.FC = () => {
             </div>
           ))}
         </div>
+
+        {/* Bottom Save & Publish Button */}
+        {classStudents.length > 0 && (
+          <div className="pt-4 border-t border-slate-800/80 flex justify-end">
+            <button
+              onClick={handleSaveAttendance}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-lg shadow-emerald-600/30 transition-all cursor-pointer hover:scale-[1.02]"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save & Publish Attendance Register</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

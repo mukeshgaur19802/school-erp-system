@@ -257,7 +257,8 @@ export const TeacherDashboard: React.FC = () => {
       studentId: stu.id,
       status: attStatusMap[stu.id] || 'PRESENT',
     }));
-    markAttendance(records, primaryClass, primarySection);
+    const todayStr = new Date().toISOString().split('T')[0];
+    markAttendance(records, primaryClass, primarySection, todayStr);
   };
 
   const handlePostHomework = (e: React.FormEvent) => {
