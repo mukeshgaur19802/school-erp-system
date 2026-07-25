@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useERP } from '../../context/ERPContext';
+import { useERP, DEFAULT_PERIODS } from '../../context/ERPContext';
 import {
   Users,
   BookOpen,
@@ -19,7 +19,7 @@ import {
   Clock,
   Filter
 } from 'lucide-react';
-import { Homework, Classwork, ExamMark } from '../../types';
+import { Homework, Classwork, ExamMark, PeriodTime, DailyOverride } from '../../types';
 
 export const TeacherDashboard: React.FC = () => {
   const {
@@ -37,12 +37,101 @@ export const TeacherDashboard: React.FC = () => {
     notifications,
     editTeacher,
     addToast,
+    periodConfigs,
+    dailyOverrides,
   } = useERP();
 
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedAuditDate, setSelectedAuditDate] = useState(todayStr);
 
   const [activeSubTab, setActiveSubTab] = useState<'OVERVIEW' | 'ATTENDANCE' | 'CLASSWORK' | 'HOMEWORK' | 'MARKS' | 'NOTIFICATIONS'>('OVERVIEW');
+
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState(todayStr);
+
+  const getDayNameFromDate = (dateStr: string) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const d = new Date(dateStr);
+    return days[d.getDay()] as 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+  };
+
+  const getTeacherScheduleForDate = (tName: string, dateStr: string) => {
+    const dayName = getDayNameFromDate(dateStr);
+    const schedule: {
+      id: string;
+      periodId: string;
+      time: string;
+      subject: string;
+      className: string;
+      section: string;
+      isSubstitute: boolean;
+    }[] = [];
+
+    // Filter standard weekly default timetable slots where this teacher is assigned
+    timetable.filter(s => s.day === dayName).forEach(slot => {
+      const override = dailyOverrides.find(o =>
+        o.date === dateStr &&
+        o.periodId === slot.periodId &&
+        o.className === slot.className &&
+        o.section === slot.section
+      );
+
+      if (override) {
+        if (override.teacherName.toLowerCase() === tName.toLowerCase()) {
+          schedule.push({
+            id: override.id,
+            periodId: override.periodId || '1',
+            time: slot.time,
+            subject: override.subject,
+            className: override.className,
+            section: override.section,
+            isSubstitute: true
+          });
+        }
+      } else {
+        if (slot.teacherName.toLowerCase() === tName.toLowerCase()) {
+          schedule.push({
+            id: slot.id,
+            periodId: slot.periodId || String(slot.period || 1),
+            time: slot.time,
+            subject: slot.subject,
+            className: slot.className,
+            section: slot.section,
+            isSubstitute: false
+          });
+        }
+      }
+    });
+
+    // Also scan for substitute overrides where this teacher is assigned as a substitute
+    dailyOverrides.filter(o => o.date === dateStr && o.teacherName.toLowerCase() === tName.toLowerCase()).forEach(override => {
+      const alreadyAdded = schedule.some(s => s.periodId === override.periodId && s.className === override.className && s.section === override.section);
+      if (!alreadyAdded) {
+        const classKey = override.section ? `${override.className}-${override.section}` : override.className;
+        const classPeriods = periodConfigs[classKey] || DEFAULT_PERIODS;
+        const pTime = classPeriods.find(p => p.periodId === override.periodId)?.time || '08:30 AM - 09:15 AM';
+        
+        schedule.push({
+          id: override.id,
+          periodId: override.periodId,
+          time: pTime,
+          subject: override.subject,
+          className: override.className,
+          section: override.section,
+          isSubstitute: true
+        });
+      }
+    });
+
+    return schedule.sort((a, b) => a.periodId.localeCompare(b.periodId, undefined, { numeric: true }));
+  };
+
+  const getTeacherWeeklySlot = (tName: string, day: string, pId: string) => {
+    return timetable.find(s =>
+      s.day === day &&
+      s.periodId === pId &&
+      s.teacherName.toLowerCase() === tName.toLowerCase()
+    );
+  };
 
   // Primary Assignment for logged-in teacher
   const teacherAssignments = currentTeacher?.assignments || [
@@ -268,25 +357,141 @@ export const TeacherDashboard: React.FC = () => {
       {activeSubTab === 'OVERVIEW' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* Assigned Period Schedule */}
-            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-              <h3 className="font-bold text-base text-white flex items-center gap-2">
-                <Clock className="w-4 h-4 text-teal-400" />
-                Today's Assigned Teaching Schedule
-              </h3>
+            {/* Daily Teaching Schedule (Date-dependent, resolves Substitutes) */}
+            <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+                <div>
+                  <h3 className="font-bold text-base text-white flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-teal-400" />
+                    Teaching Schedule for Date
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    Showing schedule for {selectedScheduleDate} ({getDayNameFromDate(selectedScheduleDate)})
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 text-xs font-semibold">Select Date:</span>
+                  <input
+                    type="date"
+                    value={selectedScheduleDate}
+                    onChange={(e) => setSelectedScheduleDate(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-teal-500 cursor-pointer"
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                {timetable.filter(s => s.teacherName.toLowerCase() === (currentTeacher?.name || 'Mrs. Sharma').toLowerCase()).length === 0 ? (
-                  <p className="text-slate-400 italic py-4 col-span-2">No periods assigned in Admin Timetable for today.</p>
+                {getTeacherScheduleForDate(currentTeacher?.name || 'Mrs. Sharma', selectedScheduleDate).length === 0 ? (
+                  <p className="text-slate-400 italic py-6 col-span-2 text-center text-[11px]">
+                    No periods assigned to you for {selectedScheduleDate} ({getDayNameFromDate(selectedScheduleDate)}).
+                  </p>
                 ) : (
-                  timetable.filter(s => s.teacherName.toLowerCase() === (currentTeacher?.name || 'Mrs. Sharma').toLowerCase()).map((slot) => (
-                    <div key={slot.id} className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-1">
-                      <span className="text-[10px] font-bold text-teal-400 uppercase">Period #{slot.period || 1} • {slot.time}</span>
-                      <h4 className="font-extrabold text-sm text-white">{slot.subject}</h4>
-                      <p className="text-slate-300">Class {slot.className}-{slot.section} ({slot.roomNo})</p>
+                  getTeacherScheduleForDate(currentTeacher?.name || 'Mrs. Sharma', selectedScheduleDate).map((slot) => (
+                    <div 
+                      key={slot.id} 
+                      className={`p-4 rounded-2xl border transition-all space-y-1 ${
+                        slot.isSubstitute 
+                          ? 'bg-amber-950/20 border-amber-500/30 text-amber-200' 
+                          : 'bg-slate-800/60 border-slate-700/60 text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[9px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded ${
+                          slot.isSubstitute ? 'bg-amber-500/20 text-amber-400' : 'bg-teal-500/10 text-teal-300'
+                        }`}>
+                          Period {slot.periodId} • {slot.isSubstitute ? 'Substitute Assignment' : 'Regular Class'}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">{slot.time}</span>
+                      </div>
+                      <h4 className="font-extrabold text-sm text-slate-100 uppercase">{slot.subject}</h4>
+                      <p className="text-slate-300 font-semibold">Class {slot.className}-{slot.section}</p>
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+
+            {/* Weekly Timetable Grid */}
+            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+              <div>
+                <h3 className="font-bold text-base text-white flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-teal-400" />
+                  My Weekly Teaching Grid
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Weekly repeating default timetable assigned by Administrator.
+                </p>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
+                <table className="w-full min-w-[700px] border-collapse table-fixed text-[11px] select-none">
+                  <thead>
+                    <tr className="bg-slate-950/80 text-slate-400 uppercase tracking-wider text-[9px] border-b border-slate-800">
+                      <th className="w-[80px] py-2 text-left pl-3 font-black">DAY</th>
+                      {DEFAULT_PERIODS.map(p => (
+                        <th key={p.periodId} className="py-2 text-center border-l border-slate-800/60 font-black">
+                          <div className="text-slate-300 font-bold">{p.name}</div>
+                          <div className="text-[8px] text-slate-500 font-mono mt-0.5">{p.time}</div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((dayName) => {
+                      return (
+                        <tr key={dayName} className="border-b border-slate-800/60 hover:bg-slate-800/10 transition-colors">
+                          <td className="py-3 pl-3 font-black text-slate-400 uppercase">
+                            {dayName.substring(0, 3)}
+                          </td>
+                          {DEFAULT_PERIODS.map(period => {
+                            if (period.isBreak) {
+                              if (dayName === 'Monday') {
+                                return (
+                                  <td
+                                    key={period.periodId}
+                                    rowSpan={6}
+                                    className="bg-slate-950/50 text-center font-bold border-l border-slate-800 align-middle w-[35px]"
+                                  >
+                                    <div 
+                                      className="flex flex-col items-center justify-center font-black tracking-[0.2em] text-[9px] text-teal-500/80 uppercase h-full py-8" 
+                                      style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}
+                                    >
+                                      {period.name}
+                                    </div>
+                                  </td>
+                                );
+                              }
+                              return null;
+                            }
+
+                            const slot = getTeacherWeeklySlot(currentTeacher?.name || 'Mrs. Sharma', dayName, period.periodId);
+                            return (
+                              <td 
+                                key={period.periodId} 
+                                className={`p-2.5 border-l border-slate-800/50 text-center ${
+                                  slot ? 'bg-teal-950/15 text-teal-100' : 'text-slate-600'
+                                }`}
+                              >
+                                {slot ? (
+                                  <div>
+                                    <div className="font-extrabold uppercase truncate text-teal-300">
+                                      {slot.subject}
+                                    </div>
+                                    <div className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate">
+                                      Class {slot.className}-{slot.section}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-slate-700 italic">-</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
 

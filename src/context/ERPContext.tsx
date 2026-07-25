@@ -15,6 +15,8 @@ import {
   BusRoute,
   FeePaymentRecord,
   CalendarEvent,
+  PeriodTime,
+  DailyOverride,
 } from '../types';
 import {
   INITIAL_STUDENTS,
@@ -73,6 +75,21 @@ const INITIAL_TIMETABLE_SLOTS: TimetableSlot[] = [
   { id: 'TS-4', day: 'Tuesday', time: '08:30 AM - 09:15 AM', period: 1, subject: 'Mathematics', className: 'Class 8', section: 'A', teacherName: 'Mrs. Sharma', roomNo: 'Room 204' },
 ];
 
+export const DEFAULT_PERIODS: PeriodTime[] = [
+  { periodId: 'ZERO', name: 'ZERO', time: '07:30 AM - 07:45 AM', isBreak: false },
+  { periodId: '1', name: '1', time: '07:45 AM - 08:25 AM', isBreak: false },
+  { periodId: '2', name: '2', time: '08:25 AM - 09:05 AM', isBreak: false },
+  { periodId: 'FRUIT', name: 'FRUIT', time: '09:05 AM - 09:15 AM', isBreak: true },
+  { periodId: '3', name: '3', time: '09:15 AM - 09:55 AM', isBreak: false },
+  { periodId: '4', name: '4', time: '09:55 AM - 10:35 AM', isBreak: false },
+  { periodId: '5', name: '5', time: '10:35 AM - 11:15 AM', isBreak: false },
+  { periodId: 'LUNCH', name: 'LUNCH', time: '11:15 AM - 11:40 AM', isBreak: true },
+  { periodId: '6', name: '6', time: '11:40 AM - 12:20 PM', isBreak: false },
+  { periodId: '7', name: '7', time: '12:20 PM - 01:00 PM', isBreak: false },
+  { periodId: '8', name: '8', time: '01:00 PM - 01:40 PM', isBreak: false },
+  { periodId: 'MUSIC', name: 'MUSIC', time: '01:40 PM - 02:00 PM', isBreak: true }
+];
+
 interface ERPContextType {
   isAuthenticated: boolean;
   currentUser: UserSession | null;
@@ -97,6 +114,8 @@ interface ERPContextType {
   busRoutes: BusRoute[];
   calendarEvents: CalendarEvent[];
   toasts: ToastAlert[];
+  periodConfigs: Record<string, PeriodTime[]>;
+  dailyOverrides: DailyOverride[];
 
   // Actions
   addStudent: (data: Omit<Student, 'id' | 'admissionNo' | 'paymentHistory'> & { customAdmissionNo?: string }) => void;
@@ -120,6 +139,12 @@ interface ERPContextType {
   removeToast: (id: string) => void;
   resetAllData: () => void;
   
+  savePeriodConfigs: (classSectionKey: string, configs: PeriodTime[]) => void;
+  addDailyOverride: (override: Omit<DailyOverride, 'id'>) => void;
+  deleteDailyOverride: (id: string) => void;
+  updateTimetableSlot: (slot: TimetableSlot) => void;
+  assignClassTeacher: (className: string, section: string, teacherId: string | null) => void;
+
   currentStudent: Student | null;
   currentTeacher: Teacher | null;
   activeTab: string;
@@ -289,6 +314,15 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return loadStoredData<TimetableSlot[]>('TIMETABLE', INITIAL_TIMETABLE_SLOTS);
   });
 
+  const [periodConfigs, setPeriodConfigs] = useState<Record<string, PeriodTime[]>>(() => {
+    return loadStoredData<Record<string, PeriodTime[]>>('PERIOD_CONFIGS', {});
+  });
+
+  const [dailyOverrides, setDailyOverrides] = useState<DailyOverride[]>(() => {
+    return loadStoredData<DailyOverride[]>('DAILY_OVERRIDES', []);
+  });
+
+
   // Track the hash of the last successfully pushed state to prevent local-push loop conflicts
   const lastPushedHashRef = useRef<string>('');
 
@@ -320,6 +354,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (cloudData.notifications) setNotifications(cloudData.notifications);
           if (cloudData.busRoutes) setBusRoutes(cloudData.busRoutes);
           if (cloudData.attendance) setAttendance(cloudData.attendance);
+          if (cloudData.periodConfigs) setPeriodConfigs(cloudData.periodConfigs);
+          if (cloudData.dailyOverrides) setDailyOverrides(cloudData.dailyOverrides);
         }
       }, (error: any) => {
         console.error("Firestore onSnapshot error:", error);
@@ -342,6 +378,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications,
       busRoutes,
       attendance,
+      periodConfigs,
+      dailyOverrides,
     };
     const currentHash = JSON.stringify(payload);
 
@@ -366,7 +404,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 1500);
 
     return () => clearTimeout(timeoutId);
-  }, [students, teachers, homework, classwork, timetable, calendarEvents, notifications, busRoutes, attendance]);
+  }, [students, teachers, homework, classwork, timetable, calendarEvents, notifications, busRoutes, attendance, periodConfigs, dailyOverrides]);
 
   // Sync session states to sessionStorage, and backing up data tables to localStorage
   useEffect(() => {
@@ -390,8 +428,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeSetStorage('BUS_ROUTES', busRoutes);
       safeSetStorage('CALENDAR', calendarEvents);
       safeSetStorage('TIMETABLE', timetable);
+      safeSetStorage('PERIOD_CONFIGS', periodConfigs);
+      safeSetStorage('DAILY_OVERRIDES', dailyOverrides);
     }
-  }, [isAuthenticated, currentUser, activeRole, students, teachers, notifications, homework, classwork, examMarks, attendance, busRoutes, calendarEvents, timetable]);
+  }, [isAuthenticated, currentUser, activeRole, students, teachers, notifications, homework, classwork, examMarks, attendance, busRoutes, calendarEvents, timetable, periodConfigs, dailyOverrides]);
 
   const login = (role: UserRole, userDetails: { email?: string; mobile?: string; name: string; teacherId?: string }) => {
     setIsAuthenticated(true);
@@ -671,7 +711,6 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
     addToast('Event Removed', 'Event removed from Calendar.', 'info');
   };
-
   const addTimetableSlot = (slot: Omit<TimetableSlot, 'id'>) => {
     const newSlot: TimetableSlot = {
       ...slot,
@@ -684,6 +723,88 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteTimetableSlot = (id: string) => {
     setTimetable((prev) => prev.filter((s) => s.id !== id));
     addToast('Slot Removed', 'Removed slot from Timetable.', 'info');
+  };
+
+  const savePeriodConfigs = (classSectionKey: string, configs: PeriodTime[]) => {
+    setPeriodConfigs((prev) => ({
+      ...prev,
+      [classSectionKey]: configs,
+    }));
+    addToast('Period Timings Updated', `Custom timings saved for ${classSectionKey}.`, 'success');
+  };
+
+  const addDailyOverride = (override: Omit<DailyOverride, 'id'>) => {
+    const newOverride: DailyOverride = {
+      ...override,
+      id: 'DO-' + Date.now(),
+    };
+    setDailyOverrides((prev) => {
+      const filtered = prev.filter(
+        (o) =>
+          !(
+            o.date === override.date &&
+            o.className === override.className &&
+            o.section === override.section &&
+            o.periodId === override.periodId
+          )
+      );
+      return [...filtered, newOverride];
+    });
+    addToast('Schedule Updated', `Assigned substitute for Period ${override.periodId} on ${override.date}.`, 'success');
+  };
+
+  const deleteDailyOverride = (id: string) => {
+    setDailyOverrides((prev) => prev.filter((o) => o.id !== id));
+    addToast('Override Removed', 'Removed substitute override.', 'info');
+  };
+
+  const updateTimetableSlot = (slot: TimetableSlot) => {
+    setTimetable((prev) => {
+      const idx = prev.findIndex((s) => s.id === slot.id);
+      if (idx !== -1) {
+        const copy = [...prev];
+        copy[idx] = slot;
+        return copy;
+      }
+      return [...prev, slot];
+    });
+  };
+
+  const assignClassTeacher = (className: string, section: string, teacherId: string | null) => {
+    setTeachers((prev) =>
+      prev.map((t) => {
+        let updatedAssignments = t.assignments.map((a) => {
+          if (a.className === className && a.section === section) {
+            return { ...a, isClassTeacher: false };
+          }
+          return a;
+        });
+
+        if (t.id === teacherId) {
+          const hasAssignment = updatedAssignments.some(
+            (a) => a.className === className && a.section === section
+          );
+          if (hasAssignment) {
+            updatedAssignments = updatedAssignments.map((a) => {
+              if (a.className === className && a.section === section) {
+                return { ...a, isClassTeacher: true };
+              }
+              return a;
+            });
+          } else {
+            updatedAssignments.push({
+              className,
+              section,
+              subject: 'Class Teacher Duties',
+              isClassTeacher: true,
+            });
+          }
+        }
+
+        return { ...t, assignments: updatedAssignments };
+      })
+    );
+    addToast('Class Teacher Assigned', 'Class teacher updated successfully.', 'success');
   };
 
   const resetAllData = () => {
@@ -700,9 +821,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBusRoutes([]);
     setCalendarEvents(INITIAL_CALENDAR_EVENTS);
     setTimetable(INITIAL_TIMETABLE_SLOTS);
+    setPeriodConfigs({});
+    setDailyOverrides([]);
     addToast('Data Wiped', 'App memory cleared.', 'info');
   };
-
   const currentStudent = students.find((s) => s.id === selectedStudentId) || students[0] || null;
   const currentTeacher = teachers.find((t) => t.id === selectedTeacherId) || teachers[0] || DEMO_TEACHER;
 
@@ -730,6 +852,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         busRoutes,
         calendarEvents,
         toasts,
+        periodConfigs,
+        dailyOverrides,
         addStudent,
         editStudent,
         addTeacher,
@@ -750,6 +874,11 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addToast,
         removeToast,
         resetAllData,
+        savePeriodConfigs,
+        addDailyOverride,
+        deleteDailyOverride,
+        updateTimetableSlot,
+        assignClassTeacher,
         currentStudent,
         currentTeacher,
         activeTab,

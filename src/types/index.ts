@@ -177,12 +177,32 @@ export interface TimetableSlot {
   day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
   time: string;
   period?: number;
+  periodId?: string;
   subject: string;
   className: string;
   section: string;
   teacherName: string;
   roomNo: string;
 }
+
+export interface PeriodTime {
+  periodId: string; // 'ZERO', '1', '2', 'FRUIT', '3', '4', '5', 'LUNCH', '6', '7', '8', 'MUSIC'
+  name: string;
+  time: string;
+  isBreak: boolean;
+}
+
+export interface DailyOverride {
+  id: string;
+  date: string; // YYYY-MM-DD
+  periodId: string;
+  className: string;
+  section: string;
+  subject: string;
+  teacherName: string;
+  isSubstitute: boolean;
+}
+
 
 export interface BusRoute {
   id: string;
