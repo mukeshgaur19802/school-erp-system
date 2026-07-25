@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+@theme {
+  --color-slate-950: #080c16; /* Ultra-luxurious deep midnight background */
+  --color-slate-900: #101625; /* Softer, elegant card/sidebar panels */
+  --color-slate-850: #161e31; /* Intermediate panels */
+  --color-slate-800: #1c273e; /* Inputs, dropdowns, and sub-panels */
+  --color-slate-700: #293856; /* Subtle, sophisticated border lines */
+  --color-slate-600: #3f527a; /* Muted text / secondary borders */
+  --color-slate-500: #5970a4; /* Interactive hover colors */
+  --color-slate-400: #889ecb; /* High-readability secondary labels */
+}
+
 @layer utilities {
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(4px); }
