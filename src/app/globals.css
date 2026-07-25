@@ -85,3 +85,44 @@ h1, h2, h3, h4, h5, h6, span.font-extrabold, strong {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Light Theme Contrast & Font Visibility Overrides */
+.text-amber-300:not(:hover) {
+  color: #b45309 !important; /* amber-700 */
+}
+.text-teal-300:not(:hover), .text-teal-200:not(:hover) {
+  color: #0f766e !important; /* teal-700 */
+}
+.text-emerald-300:not(:hover), .text-emerald-200:not(:hover) {
+  color: #15803d !important; /* emerald-700 */
+}
+.text-blue-300:not(:hover), .text-blue-200:not(:hover) {
+  color: #1d4ed8 !important; /* blue-700 */
+}
+.text-indigo-300:not(:hover), .text-indigo-200:not(:hover) {
+  color: #4338ca !important; /* indigo-700 */
+}
+.text-rose-300:not(:hover), .text-rose-200:not(:hover) {
+  color: #be123c !important; /* rose-700 */
+}
+
+/* Map pastel text-xxx-400 classes to solid visible shades in light mode */
+.text-blue-400:not(:hover) {
+  color: #2563eb !important; /* blue-600 */
+}
+.text-teal-400:not(:hover) {
+  color: #0d9488 !important; /* teal-600 */
+}
+.text-amber-400:not(:hover) {
+  color: #d97706 !important; /* amber-600 */
+}
+.text-emerald-400:not(:hover) {
+  color: #059669 !important; /* emerald-600 */
+}
+.text-rose-400:not(:hover) {
+  color: #e11d48 !important; /* rose-600 */
+}
+.text-indigo-400:not(:hover) {
+  color: #4f46e5 !important; /* indigo-600 */
+}
+
