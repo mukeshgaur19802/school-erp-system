@@ -37,7 +37,7 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white shadow-xl font-sans">
+    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-slate-800 shadow-xl font-sans">
       {/* Toast Overlay */}
       {toasts.length > 0 && (
         <div className="fixed top-20 right-4 sm:right-6 z-50 flex flex-col gap-2 max-w-sm sm:max-w-md w-full pointer-events-auto">
@@ -80,10 +80,10 @@ export const Navbar: React.FC = () => {
               />
             </div>
             <div>
-              <span className="font-black text-base sm:text-lg tracking-tight bg-gradient-to-r from-white via-blue-100 to-blue-300 bg-clip-text text-transparent uppercase">
+              <span className="font-black text-base sm:text-lg tracking-tight bg-gradient-to-r from-blue-900 to-indigo-900 bg-clip-text text-transparent uppercase">
                 KIDZ R KIDZ PRE SCHOOL
               </span>
-              <p className="text-[10px] text-blue-300 font-semibold hidden sm:block">School ERP & Communication Platform</p>
+              <p className="text-[10px] text-blue-600 font-semibold hidden sm:block">School ERP & Communication Platform</p>
             </div>
           </div>
 
