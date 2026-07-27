@@ -497,7 +497,7 @@ export default function MobileAppPortal() {
                 className={`flex flex-col items-center gap-1 ${activeTab === 'homework' ? 'text-teal-400' : 'text-slate-500'}`}
               >
                 <ClipboardListIcon className="w-4 h-4" />
-                <span className="text-[8px] font-bold">Homework</span>
+                <span className="text-[8px] font-bold">Work</span>
               </button>
               <button 
                 onClick={() => setActiveTab('marks')}

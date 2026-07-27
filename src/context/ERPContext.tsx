@@ -131,8 +131,8 @@ interface ERPContextType {
   resetTeacherPassword: (teacherId: string, newPass: string) => void;
   resetStudentPassword: (studentId: string, newPass: string) => void;
   markAttendance: (records: { studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE'; remarks?: string }[], className: string, section: string, date: string) => void;
-  addHomework: (data: Omit<Homework, 'id' | 'assignedDate'>) => void;
-  addClasswork: (data: Omit<Classwork, 'id' | 'date'>) => void;
+  addHomework: (data: Omit<Homework, 'id'> & { assignedDate?: string }) => void;
+  addClasswork: (data: Omit<Classwork, 'id'> & { date?: string }) => void;
   addExamMarks: (data: Omit<ExamMark, 'id'>[]) => void;
   makeFeePayment: (studentId: string, amount: number, method: 'UPI' | 'Bank' | 'Cash', feeType: string) => void;
   sendNotification: (data: Omit<NotificationItem, 'id' | 'createdAt' | 'isRead'>) => void;
@@ -224,6 +224,13 @@ function loadStoredData<T>(keySuffix: string, fallback: T): T {
 
   return fallback;
 }
+
+export const getLocalDateString = () => {
+  const date = new Date();
+  const tzoffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
+  const localISOTime = new Date(date.getTime() - tzoffset).toISOString().slice(0, 10);
+  return localISOTime;
+};
 
 function safeSetStorage(keySuffix: string, value: any) {
   if (typeof window === 'undefined') return;
@@ -333,6 +340,45 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
   };
+
+  // Trigger native push notifications for newly received notifications targeting the current user
+  const processedNotifsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    notifications.forEach((notif) => {
+      // If already processed during this session, skip
+      if (processedNotifsRef.current.has(notif.id)) return;
+      processedNotifsRef.current.add(notif.id);
+
+      // Only alert on notifications created in the last 10 minutes to avoid spamming historical ones on load
+      const createdTime = new Date(notif.createdAt).getTime();
+      const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+      if (createdTime < tenMinutesAgo) return;
+
+      // Check if it targets the current user
+      let isTargeted = false;
+      if (currentUser.role === 'PARENT' && selectedStudentId) {
+        const student = students.find(s => s.id === selectedStudentId);
+        if (notif.targetAudience === 'Everyone') {
+          isTargeted = true;
+        } else if (notif.targetAudience === 'Selected Classes' && student) {
+          isTargeted = (notif.targetClassSection === `${student.className}-${student.section}`);
+        } else if (notif.targetAudience === 'Individual Parents') {
+          isTargeted = (notif.targetStudentId === selectedStudentId);
+        }
+      } else if (currentUser.role === 'TEACHER') {
+        if (notif.targetAudience === 'Everyone' || notif.targetAudience === 'Teachers Only') {
+          isTargeted = true;
+        }
+      }
+
+      if (isTargeted) {
+        triggerPushNotification(notif.title, notif.message);
+      }
+    });
+  }, [notifications, currentUser, selectedStudentId, students]);
 
   // 1. Real-Time onSnapshot Firestore Listener for immediate cross-device sync
   useEffect(() => {
@@ -652,6 +698,39 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }));
       return [...newEntries, ...filtered];
     });
+
+    // Create notifications for the parents
+    const newNotifs: NotificationItem[] = records.map((rec) => {
+      const student = students.find((s) => s.id === rec.studentId);
+      const studentName = student ? student.name : 'Your child';
+      const statusText = rec.status;
+      return {
+        id: 'NOTIF-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5),
+        title: `Attendance Alert: ${studentName} is ${statusText}`,
+        message: `Dear Parent, your child ${studentName} has been marked ${statusText} for date ${date}.`,
+        category: 'Emergency Alert',
+        targetAudience: 'Individual Parents',
+        targetStudentId: rec.studentId,
+        senderName: currentTeacher?.name || 'Class Teacher',
+        senderRole: 'TEACHER',
+        createdAt: new Date().toISOString(),
+        isRead: false,
+      };
+    });
+
+    setNotifications((prev) => {
+      // Remove any existing attendance notifications for these students on this specific date
+      const studentIds = new Set(records.map(r => r.studentId));
+      const filtered = prev.filter(n => {
+        if (n.targetAudience === 'Individual Parents' && studentIds.has(n.targetStudentId || '')) {
+          const isAttendanceNotif = n.title.startsWith('Attendance Alert:') && n.message.includes(`for date ${date}`);
+          return !isAttendanceNotif;
+        }
+        return true;
+      });
+      return [...newNotifs, ...filtered];
+    });
+
     addToast('Attendance Saved', `Marked attendance for ${date} (Class ${className}-${section}).`, 'success');
 
     // Push notification for the class attendance
@@ -663,13 +742,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  const addHomework = (data: Omit<Homework, 'id' | 'assignedDate'>) => {
+  const addHomework = (data: Omit<Homework, 'id'> & { assignedDate?: string }) => {
     const newId = 'HW-' + Date.now();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const dateStr = data.assignedDate || getLocalDateString();
     const newHw: Homework = {
       ...data,
       id: newId,
-      assignedDate: todayStr,
+      assignedDate: dateStr,
     };
     setHomework((prev) => [newHw, ...prev]);
 
@@ -694,16 +773,35 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  const addClasswork = (data: Omit<Classwork, 'id' | 'date'>) => {
+  const addClasswork = (data: Omit<Classwork, 'id'> & { date?: string }) => {
     const newId = 'CW-' + Date.now();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const dateStr = data.date || getLocalDateString();
     const newCw: Classwork = {
       ...data,
       id: newId,
-      date: todayStr,
+      date: dateStr,
     };
     setClasswork((prev) => [newCw, ...prev]);
+
+    const cwNotif: NotificationItem = {
+      id: 'NOTIF-' + (Date.now() + 1),
+      title: `${data.subject} Classwork Posted`,
+      message: `${data.teacherName} posted Classwork: "${data.title}" for Class ${data.className}-${data.section}. Topics covered: "${data.topicsCovered}".`,
+      category: 'Homework',
+      targetAudience: 'Selected Classes',
+      targetClassSection: `${data.className}-${data.section}`,
+      senderName: data.teacherName,
+      senderRole: 'TEACHER',
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setNotifications((prev) => [cwNotif, ...prev]);
+
     addToast('Classwork Posted', `Published daily classwork for Class ${data.className}-${data.section}.`, 'success');
+    triggerPushNotification(
+      `${data.subject} Classwork Posted`,
+      `Class ${data.className}-${data.section}: "${data.title}" by ${data.teacherName}`
+    );
   };
 
   const addExamMarks = (entries: Omit<ExamMark, 'id'>[]) => {

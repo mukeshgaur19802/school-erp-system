@@ -1,64 +1,95 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useERP } from '../../context/ERPContext';
-import { CheckSquare, UserCheck, CheckCircle2, XCircle, Clock, Save } from 'lucide-react';
+import { useERP, getLocalDateString } from '../../context/ERPContext';
+import { CheckCircle2, XCircle, Clock, Save } from 'lucide-react';
 
 export const AttendanceMarker: React.FC = () => {
-  const { students, attendance, markAttendance, currentTeacher } = useERP();
+  const { students, attendance, markAttendance, currentTeacher, addToast } = useERP();
 
-  const [selectedClass, setSelectedClass] = useState(() => currentTeacher?.assignments[0]?.className || 'Class 5');
-  const [selectedSection, setSelectedSection] = useState(() => currentTeacher?.assignments[0]?.section || 'A');
+  // Find assignments where teacher is class teacher
+  const classTeacherAssignments = currentTeacher?.assignments.filter(a => a.isClassTeacher) || [];
 
-  // Filter students matching selected class & section
+  const [selectedClass, setSelectedClass] = useState(() => classTeacherAssignments[0]?.className || '');
+  const [selectedSection, setSelectedSection] = useState(() => classTeacherAssignments[0]?.section || '');
+  const [attDate, setAttDate] = useState(() => getLocalDateString());
+  const [unmarkedErrorIds, setUnmarkedErrorIds] = useState<Set<string>>(new Set());
+
+  // Roster student selection
   const classStudents = students.filter(
     (s) => s.className === selectedClass && s.section === selectedSection
   );
 
-  const [attendanceState, setAttendanceState] = useState<{ [studentId: string]: 'PRESENT' | 'ABSENT' | 'LATE' }>(() => {
-    const initial: { [key: string]: 'PRESENT' | 'ABSENT' | 'LATE' } = {};
-    students.forEach((s) => {
-      initial[s.id] = 'PRESENT';
-    });
-    return initial;
+  const [attendanceState, setAttendanceState] = useState<{ [studentId: string]: 'PRESENT' | 'ABSENT' | undefined }>(() => {
+    return {};
   });
-
-  const [attDate, setAttDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Dynamically load historical attendance when date, class or section changes
   useEffect(() => {
-    const initial: { [studentId: string]: 'PRESENT' | 'ABSENT' | 'LATE' } = {};
+    const initial: { [studentId: string]: 'PRESENT' | 'ABSENT' | undefined } = {};
     classStudents.forEach((s) => {
       const record = attendance.find(
         (r) => r.studentId === s.id && r.date === attDate
       );
-      initial[s.id] = record ? record.status : 'PRESENT';
+      initial[s.id] = record ? (record.status as 'PRESENT' | 'ABSENT') : undefined;
     });
     setAttendanceState(initial);
+    setUnmarkedErrorIds(new Set());
   }, [attDate, selectedClass, selectedSection, attendance, students]);
 
-  const handleStatusChange = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE') => {
+  const handleStatusChange = (studentId: string, status: 'PRESENT' | 'ABSENT' | undefined) => {
     setAttendanceState((prev) => ({ ...prev, [studentId]: status }));
   };
 
   const handleSaveAttendance = () => {
-    const records = classStudents.map((s) => ({
-      studentId: s.id,
-      status: attendanceState[s.id] || 'PRESENT',
-    }));
+    const unmarked: string[] = [];
+    const records = classStudents.map((s) => {
+      const status = attendanceState[s.id];
+      if (!status) {
+        unmarked.push(s.id);
+      }
+      return {
+        studentId: s.id,
+        status: status as 'PRESENT' | 'ABSENT',
+      };
+    });
 
+    if (unmarked.length > 0) {
+      setUnmarkedErrorIds(new Set(unmarked));
+      addToast(
+        'Attendance Incomplete',
+        'Please mark attendance for all students before saving.',
+        'error'
+      );
+      return;
+    }
+
+    setUnmarkedErrorIds(new Set());
     markAttendance(records, selectedClass, selectedSection, attDate);
   };
 
   const presentCount = classStudents.filter((s) => attendanceState[s.id] === 'PRESENT').length;
   const absentCount = classStudents.filter((s) => attendanceState[s.id] === 'ABSENT').length;
-  const lateCount = classStudents.filter((s) => attendanceState[s.id] === 'LATE').length;
+  const unmarkedCount = classStudents.length - presentCount - absentCount;
+
+  // Access Control Screen if not assigned as a Class Teacher
+  if (classTeacherAssignments.length === 0) {
+    return (
+      <div className="p-12 rounded-3xl bg-slate-900 border border-slate-800 text-center space-y-4 font-sans animate-fade-in">
+        <XCircle className="w-12 h-12 text-rose-500 mx-auto" />
+        <h2 className="text-lg font-black text-white">Access Restricted</h2>
+        <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+          You are not assigned as a Class Teacher for any class. If you are substituting, please contact the Admin to assign you as the Class Teacher for today.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 text-slate-100 animate-fade-in">
+    <div className="space-y-6 text-slate-100 font-sans animate-fade-in">
       {/* Header */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30">
               Daily Attendance Register
@@ -78,30 +109,31 @@ export const AttendanceMarker: React.FC = () => {
                 type="date"
                 value={attDate}
                 onChange={(e) => setAttDate(e.target.value)}
-                className="bg-slate-900 text-white px-2 py-0.5 rounded-xl border border-slate-700/80 focus:outline-none focus:border-emerald-500 font-semibold"
+                className="bg-slate-900 text-white px-2 py-0.5 rounded-xl border border-slate-700/80 focus:outline-none focus:border-emerald-500 font-semibold font-mono"
               />
 
-              <label className="text-slate-400 font-medium px-2">Class:</label>
-              <select
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="bg-slate-900 text-white px-3 py-1 rounded-xl focus:outline-none"
-              >
-                {['Play Group', 'Nursery', 'LKG', 'UKG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8'].map((c) => (
-                  <option key={c} value={c}>{c.startsWith('Class') ? c : `Class ${c}`}</option>
-                ))}
-              </select>
-
-              <label className="text-slate-400 font-medium px-2">Sec:</label>
-              <select
-                value={selectedSection}
-                onChange={(e) => setSelectedSection(e.target.value)}
-                className="bg-slate-900 text-white px-3 py-1 rounded-xl focus:outline-none"
-              >
-                {['A','B','C','D'].map((s) => (
-                  <option key={s} value={s}>Sec {s}</option>
-                ))}
-              </select>
+              <label className="text-slate-400 font-semibold px-2">Class:</label>
+              {classTeacherAssignments.length === 1 ? (
+                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-0.5 rounded-xl font-bold font-sans">
+                  {classTeacherAssignments[0].className} - Sec {classTeacherAssignments[0].section}
+                </span>
+              ) : (
+                <select
+                  value={`${selectedClass}-${selectedSection}`}
+                  onChange={(e) => {
+                    const [c, s] = e.target.value.split('-');
+                    setSelectedClass(c);
+                    setSelectedSection(s);
+                  }}
+                  className="bg-slate-900 text-white px-3 py-1 rounded-xl focus:outline-none font-bold font-sans"
+                >
+                  {classTeacherAssignments.map((a) => (
+                    <option key={`${a.className}-${a.section}`} value={`${a.className}-${a.section}`}>
+                      {a.className} - Sec {a.section}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         </div>
@@ -116,9 +148,9 @@ export const AttendanceMarker: React.FC = () => {
             <span className="text-rose-300 font-semibold">Absent: {absentCount}</span>
             <XCircle className="w-4 h-4 text-rose-400" />
           </div>
-          <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/30 flex items-center justify-between">
-            <span className="text-amber-300 font-semibold">Late: {lateCount}</span>
-            <Clock className="w-4 h-4 text-amber-400" />
+          <div className="p-3 rounded-2xl bg-slate-950/45 border border-slate-800/80 flex items-center justify-between">
+            <span className="text-slate-400 font-semibold">Unmarked: {unmarkedCount}</span>
+            <Clock className="w-4 h-4 text-slate-500" />
           </div>
         </div>
       </div>
@@ -132,10 +164,10 @@ export const AttendanceMarker: React.FC = () => {
 
           <button
             onClick={handleSaveAttendance}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
           >
             <Save className="w-4 h-4" />
-            <span>Save & Submit Attendance Register</span>
+            <span>Save & Send to Parents</span>
           </button>
         </div>
 
@@ -143,7 +175,11 @@ export const AttendanceMarker: React.FC = () => {
           {[...classStudents].sort((a, b) => a.rollNo - b.rollNo).map((stu) => (
             <div
               key={stu.id}
-              className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-800/30 px-3 rounded-2xl transition-colors"
+              className={`py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-800/30 px-3 rounded-2xl transition-all ${
+                unmarkedErrorIds.has(stu.id)
+                  ? 'border border-rose-500/50 bg-rose-500/5 shadow-[0_0_10px_rgba(244,63,94,0.15)]'
+                  : 'border border-transparent'
+              }`}
             >
               <div className="flex items-center gap-3">
                 <img
@@ -159,43 +195,41 @@ export const AttendanceMarker: React.FC = () => {
                 </div>
               </div>
 
-              {/* Status Toggle Buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleStatusChange(stu.id, 'PRESENT')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    attendanceState[stu.id] === 'PRESENT'
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Present</span>
-                </button>
+              {/* Mutually Exclusive Checkboxes */}
+              <div className="flex items-center gap-6 shrink-0">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={attendanceState[stu.id] === 'PRESENT'}
+                    onChange={() => {
+                      setUnmarkedErrorIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(stu.id);
+                        return next;
+                      });
+                      handleStatusChange(stu.id, attendanceState[stu.id] === 'PRESENT' ? undefined : 'PRESENT');
+                    }}
+                    className="w-4.5 h-4.5 rounded border-slate-750 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900 cursor-pointer accent-emerald-500"
+                  />
+                  <span className={`text-xs font-bold ${attendanceState[stu.id] === 'PRESENT' ? 'text-emerald-400' : 'text-slate-400'}`}>Present</span>
+                </label>
 
-                <button
-                  onClick={() => handleStatusChange(stu.id, 'ABSENT')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    attendanceState[stu.id] === 'ABSENT'
-                      ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <XCircle className="w-3.5 h-3.5" />
-                  <span>Absent</span>
-                </button>
-
-                <button
-                  onClick={() => handleStatusChange(stu.id, 'LATE')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    attendanceState[stu.id] === 'LATE'
-                      ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Late</span>
-                </button>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={attendanceState[stu.id] === 'ABSENT'}
+                    onChange={() => {
+                      setUnmarkedErrorIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(stu.id);
+                        return next;
+                      });
+                      handleStatusChange(stu.id, attendanceState[stu.id] === 'ABSENT' ? undefined : 'ABSENT');
+                    }}
+                    className="w-4.5 h-4.5 rounded border-slate-750 bg-slate-800 text-rose-500 focus:ring-rose-500 focus:ring-offset-slate-900 cursor-pointer accent-rose-500"
+                  />
+                  <span className={`text-xs font-bold ${attendanceState[stu.id] === 'ABSENT' ? 'text-rose-400' : 'text-slate-400'}`}>Absent</span>
+                </label>
               </div>
             </div>
           ))}
@@ -209,7 +243,7 @@ export const AttendanceMarker: React.FC = () => {
               className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-lg shadow-emerald-600/30 transition-all cursor-pointer hover:scale-[1.02]"
             >
               <Save className="w-4 h-4" />
-              <span>Save & Publish Attendance Register</span>
+              <span>Save & Send to Parents</span>
             </button>
           </div>
         )}

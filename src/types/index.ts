@@ -144,6 +144,8 @@ export interface Classwork {
   topicsCovered: string;
   description?: string;
   homeworkAssigned?: string;
+  attachmentName?: string;
+  attachmentUrl?: string;
   attachments?: string[];
 }
 
