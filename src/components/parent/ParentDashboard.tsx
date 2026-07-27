@@ -172,8 +172,8 @@ export const ParentDashboard: React.FC = () => {
 
         <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-slate-400">Active Homework</span>
-            <h2 className="text-2xl font-black text-cyan-300 mt-1">{studentHw.length} Tasks</h2>
+            <span className="text-xs font-semibold text-slate-400">Daily Homework</span>
+            <h2 className="text-2xl font-black text-cyan-300 mt-1">{studentHw.length} Updates</h2>
             <button onClick={() => setActiveTab('academics')} className="text-[11px] text-cyan-400 hover:underline mt-1 font-medium block">
               View Worksheets →
             </button>

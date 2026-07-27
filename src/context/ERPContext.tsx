@@ -288,10 +288,6 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (authStr === 'true') {
         setIsAuthenticated(true);
       }
-      const lastUpd = localStorage.getItem(CURRENT_STORAGE_PREFIX + 'LAST_UPDATED');
-      if (lastUpd) {
-        localLastUpdatedRef.current = Number(lastUpd);
-      }
     }
 
     setStudents(recalculateAlphabeticalRollNumbers(loadStoredData<Student[]>('STUDENTS', INITIAL_STUDENTS)));
@@ -317,16 +313,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Track the hash of the last successfully pushed state to prevent local-push loop conflicts
   const lastPushedHashRef = useRef<string>('');
-  const localLastUpdatedRef = useRef<number>(0);
+  const isLocalChangePendingRef = useRef<boolean>(false);
 
   const touchLocalState = () => {
-    const now = Date.now();
-    localLastUpdatedRef.current = now;
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(CURRENT_STORAGE_PREFIX + 'LAST_UPDATED', String(now));
-      } catch (e) {}
-    }
+    isLocalChangePendingRef.current = true;
   };
 
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'CONNECTED' | 'ERROR' | 'SYNCING' | 'LOCAL_ONLY'>('LOCAL_ONLY');
@@ -406,18 +396,9 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const cloudData = docSnap.data();
           const cloudHash = JSON.stringify(cloudData);
 
-          const cloudLastUpdated = cloudData.lastUpdated || 0;
-
-          // Skip if the cloud update is older than or equal to our local update
-          if (cloudLastUpdated <= localLastUpdatedRef.current) return;
-
-          // Sync our local timestamp ref
-          localLastUpdatedRef.current = cloudLastUpdated;
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem(CURRENT_STORAGE_PREFIX + 'LAST_UPDATED', String(cloudLastUpdated));
-            } catch (e) {}
-          }
+          // Skip if we have unpushed local changes, or if the update matches our last push
+          if (isLocalChangePendingRef.current) return;
+          if (cloudHash === lastPushedHashRef.current) return;
 
           lastPushedHashRef.current = cloudHash;
 
@@ -459,18 +440,18 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       attendance,
       periodConfigs,
       dailyOverrides,
-      lastUpdated: localLastUpdatedRef.current,
     };
     const currentHash = JSON.stringify(payload);
 
     if (currentHash === lastPushedHashRef.current) return;
 
     const timeoutId = setTimeout(async () => {
-      lastPushedHashRef.current = currentHash;
       try {
         setCloudSyncStatus('SYNCING');
         const success = await pushToCloud(payload);
         if (success) {
+          lastPushedHashRef.current = currentHash;
+          isLocalChangePendingRef.current = false;
           setCloudSyncStatus('CONNECTED');
           setCloudErrorMsg('');
         } else {
@@ -512,7 +493,6 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeSetStorage('DAILY_OVERRIDES', dailyOverrides);
       safeSetStorage('DELETED_STUDENTS', deletedStudents);
       safeSetStorage('DELETED_TEACHERS', deletedTeachers);
-      safeSetStorage('LAST_UPDATED', localLastUpdatedRef.current);
     }
   }, [isAuthenticated, currentUser, activeRole, students, teachers, deletedStudents, deletedTeachers, notifications, homework, classwork, examMarks, attendance, busRoutes, calendarEvents, timetable, periodConfigs, dailyOverrides]);
 
