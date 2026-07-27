@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useERP } from '../../context/ERPContext';
+import { useERP, DEFAULT_PERIODS } from '../../context/ERPContext';
+import { PeriodTime } from '../../types';
 import { BookMarked, CheckCircle2, Award, Calendar, BookOpen, Clock, Printer, Sparkles, Paperclip } from 'lucide-react';
 
 export const ParentAcademics: React.FC = () => {
-  const { currentStudent, attendance, homework, classwork, examMarks, timetable, setActiveModal, setModalData } = useERP();
-  const [academicTab, setAcademicTab] = useState<'ATTENDANCE' | 'HOMEWORK' | 'TIMETABLE' | 'RESULTS'>('HOMEWORK');
+  const { currentStudent, attendance, homework, classwork, examMarks, timetable, setActiveModal, setModalData, periodConfigs } = useERP();
+  const [academicTab, setAcademicTab] = useState<'ATTENDANCE' | 'HOMEWORK' | 'TIMETABLE'>('HOMEWORK');
   const [selectedParentDate, setSelectedParentDate] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [showAllDatesParent, setShowAllDatesParent] = useState(false);
 
   const studentAtt = attendance.filter((a) => a.studentId === currentStudent?.id);
   const studentHw = homework.filter((h) => h.className === currentStudent?.className && h.section === currentStudent?.section);
   const studentCw = classwork.filter((c) => c.className === currentStudent?.className && c.section === currentStudent?.section);
-  const studentMarks = examMarks.filter((m) => m.studentId === currentStudent?.id);
   const studentTt = timetable.filter((t) => t.className === currentStudent?.className && t.section === currentStudent?.section);
 
   const filteredHw = showAllDatesParent 
@@ -22,6 +22,24 @@ export const ParentAcademics: React.FC = () => {
   const filteredCw = showAllDatesParent 
     ? studentCw 
     : studentCw.filter(c => c.date === selectedParentDate);
+
+  const classKey = currentStudent?.section ? `${currentStudent.className}-${currentStudent.section}` : (currentStudent?.className || '');
+  const activePeriods = periodConfigs[classKey] || DEFAULT_PERIODS;
+
+  const getVisiblePeriods = (periods: PeriodTime[]) => {
+    const reversed = [...periods].reverse();
+    const firstNonEmptyFromEndIdx = reversed.findIndex(p => p.time && p.time.trim() !== '');
+    if (firstNonEmptyFromEndIdx === -1) {
+      return periods.slice(0, 6);
+    }
+    return periods.slice(0, periods.length - firstNonEmptyFromEndIdx);
+  };
+
+  const visiblePeriods = getVisiblePeriods(activePeriods);
+
+  const getCellDetails = (day: string, periodId: string) => {
+    return studentTt.find(s => s.day === day && s.periodId === periodId);
+  };
 
   return (
     <div className="space-y-6 text-slate-100 animate-fade-in">
@@ -62,16 +80,6 @@ export const ParentAcademics: React.FC = () => {
             }`}
           >
             Timetable
-          </button>
-          <button
-            onClick={() => setAcademicTab('RESULTS')}
-            className={`px-3 py-1.5 rounded-xl transition-all ${
-              academicTab === 'RESULTS'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Exam Results & Report Card
           </button>
         </div>
       </div>
@@ -213,54 +221,87 @@ export const ParentAcademics: React.FC = () => {
             <Calendar className="w-4 h-4 text-indigo-400" />
             Weekly Class Timetable (Class {currentStudent?.className}-{currentStudent?.section})
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {studentTt.map((tt) => (
-              <div key={tt.id} className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-1">
-                <span className="text-[10px] font-bold text-indigo-400 uppercase">Period {tt.period}</span>
-                <h4 className="font-bold text-sm text-white">{tt.subject}</h4>
-                <p className="text-xs text-slate-400">{tt.teacherName}</p>
-                <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-700/50">{tt.time}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+          
+          <div className="p-4 rounded-3xl bg-slate-950/40 border border-slate-800 shadow-xl overflow-x-auto">
+            <table className="w-full min-w-[800px] border-collapse table-fixed text-[11px]">
+              <thead>
+                <tr className="bg-slate-950/60 text-slate-400 uppercase tracking-wider text-[9px] border-b border-slate-800">
+                  <th className="w-[80px] py-3 text-left pl-4 font-black">DAY</th>
+                  {visiblePeriods.map((period) => (
+                    <th key={period.periodId} className="py-3 text-center border-l border-slate-800/50 font-black">
+                      <div className="font-extrabold text-slate-200">{period.name}</div>
+                      <div className="font-semibold text-slate-500 font-mono mt-0.5">{period.time}</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((dayName) => {
+                  return (
+                    <tr 
+                      key={dayName} 
+                      className="border-b border-slate-800/80 hover:bg-slate-800/20 transition-colors"
+                    >
+                      <td className="py-4 pl-4 font-black text-slate-300 uppercase">
+                        {dayName.substring(0, 3)}
+                      </td>
+                      
+                      {visiblePeriods.map((period) => {
+                        if (period.isBreak) {
+                          if (dayName === 'Monday') {
+                            return (
+                              <td
+                                key={period.periodId}
+                                rowSpan={6}
+                                className="bg-slate-950/50 text-center font-bold border-l border-slate-800 align-middle w-[50px] p-2 text-indigo-400"
+                              >
+                                <div 
+                                  className="flex flex-col items-center justify-center font-extrabold tracking-[0.2em] text-[10px] uppercase h-full py-12" 
+                                  style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}
+                                >
+                                  {period.name}
+                                </div>
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
 
-      {/* Exam Results Tab */}
-      {academicTab === 'RESULTS' && (
-        <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-base text-white flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-400" />
-              Unit Test & Term Exam Results
-            </h3>
+                        const slot = getCellDetails(dayName, period.periodId);
+                        const isUnassigned = !slot || !slot.subject;
 
-            <button
-              onClick={() => {
-                setModalData(currentStudent);
-                setActiveModal('REPORT_CARD');
-              }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-bold shadow-lg shadow-emerald-600/30"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print Official Progress Report Card</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {studentMarks.map((m) => (
-              <div key={m.id} className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-2">
-                <span className="text-[10px] font-bold text-amber-300 uppercase">{m.examName}</span>
-                <h4 className="font-bold text-base text-white">{m.subject}</h4>
-                <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-lg font-black text-emerald-400">{m.marksObtained} / {m.maxMarks}</span>
-                  <span className="font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    Grade {m.grade}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400 italic">"{m.remarks}"</p>
-              </div>
-            ))}
+                        return (
+                          <td 
+                            key={period.periodId} 
+                            className="p-3 border-l border-slate-800/60 text-center bg-slate-800/10 text-slate-100"
+                          >
+                            {!isUnassigned ? (
+                              <div className="space-y-1">
+                                <div className="font-extrabold uppercase text-slate-200 truncate">
+                                  {slot.subject}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-medium truncate">
+                                  {slot.teacherName}
+                                </div>
+                                {slot.roomNo && (
+                                  <div className="text-[8px] text-indigo-400 font-semibold truncate">
+                                    {slot.roomNo}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] font-bold text-slate-600 italic">
+                                Free
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

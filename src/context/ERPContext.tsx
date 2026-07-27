@@ -288,6 +288,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (authStr === 'true') {
         setIsAuthenticated(true);
       }
+      const lastUpd = localStorage.getItem(CURRENT_STORAGE_PREFIX + 'LAST_UPDATED');
+      if (lastUpd) {
+        localLastUpdatedRef.current = Number(lastUpd);
+      }
     }
 
     setStudents(recalculateAlphabeticalRollNumbers(loadStoredData<Student[]>('STUDENTS', INITIAL_STUDENTS)));
@@ -313,6 +317,17 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Track the hash of the last successfully pushed state to prevent local-push loop conflicts
   const lastPushedHashRef = useRef<string>('');
+  const localLastUpdatedRef = useRef<number>(0);
+
+  const touchLocalState = () => {
+    const now = Date.now();
+    localLastUpdatedRef.current = now;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(CURRENT_STORAGE_PREFIX + 'LAST_UPDATED', String(now));
+      } catch (e) {}
+    }
+  };
 
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'CONNECTED' | 'ERROR' | 'SYNCING' | 'LOCAL_ONLY'>('LOCAL_ONLY');
   const [cloudErrorMsg, setCloudErrorMsg] = useState<string>('');
@@ -391,8 +406,18 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const cloudData = docSnap.data();
           const cloudHash = JSON.stringify(cloudData);
 
-          // Skip if the cloud update matches what we just pushed locally
-          if (cloudHash === lastPushedHashRef.current) return;
+          const cloudLastUpdated = cloudData.lastUpdated || 0;
+
+          // Skip if the cloud update is older than or equal to our local update
+          if (cloudLastUpdated <= localLastUpdatedRef.current) return;
+
+          // Sync our local timestamp ref
+          localLastUpdatedRef.current = cloudLastUpdated;
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(CURRENT_STORAGE_PREFIX + 'LAST_UPDATED', String(cloudLastUpdated));
+            } catch (e) {}
+          }
 
           lastPushedHashRef.current = cloudHash;
 
@@ -434,6 +459,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       attendance,
       periodConfigs,
       dailyOverrides,
+      lastUpdated: localLastUpdatedRef.current,
     };
     const currentHash = JSON.stringify(payload);
 
@@ -486,6 +512,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeSetStorage('DAILY_OVERRIDES', dailyOverrides);
       safeSetStorage('DELETED_STUDENTS', deletedStudents);
       safeSetStorage('DELETED_TEACHERS', deletedTeachers);
+      safeSetStorage('LAST_UPDATED', localLastUpdatedRef.current);
     }
   }, [isAuthenticated, currentUser, activeRole, students, teachers, deletedStudents, deletedTeachers, notifications, homework, classwork, examMarks, attendance, busRoutes, calendarEvents, timetable, periodConfigs, dailyOverrides]);
 
@@ -576,6 +603,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `Added ${data.name} to Class ${data.className}-${data.section} (Adm No: ${admNo}). Roll number automatically assigned alphabetically.`,
       'success'
     );
+    touchLocalState();
   };
 
   const editStudent = (id: string, updatedData: Partial<Student>) => {
@@ -584,6 +612,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return recalculateAlphabeticalRollNumbers(updatedList);
     });
     addToast('Student Profile Updated', 'Saved student profile changes & recalculated alphabetical roll numbers.', 'success');
+    touchLocalState();
   };
 
   const addTeacher = (data: Omit<Teacher, 'id' | 'joinDate'>) => {
@@ -598,6 +627,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTeachers((prev) => [newTeacher, ...prev]);
     setSelectedTeacherId(newId);
     addToast('Teacher Account Created', `${data.name} registered with mobile ${data.mobile}.`, 'success');
+    touchLocalState();
   };
 
   const editTeacher = (id: string, updatedData: Partial<Teacher>) => {
@@ -605,6 +635,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((t) => (t.id === id ? { ...t, ...updatedData } : t))
     );
     addToast('Teacher Profile Updated', 'Updated teacher details & assignments.', 'success');
+    touchLocalState();
   };
 
   const deleteStudent = (id: string) => {
@@ -632,6 +663,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     addToast('Student Account Deleted', `${studentToDelete.name}'s record was archived and their outstanding balance cleared.`, 'success');
+    touchLocalState();
   };
 
   const deleteTeacher = (id: string) => {
@@ -663,6 +695,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ));
 
     addToast('Teacher Account Deleted', `${teacherToDelete.name}'s record has been archived.`, 'success');
+    touchLocalState();
   };
 
   const resetTeacherPassword = (teacherId: string, newPass: string) => {
@@ -670,6 +703,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((t) => (t.id === teacherId ? { ...t, password: newPass } : t))
     );
     addToast('Password Reset', `Password reset for teacher account.`, 'success');
+    touchLocalState();
   };
 
   const resetStudentPassword = (studentId: string, newPass: string) => {
@@ -677,6 +711,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((s) => (s.id === studentId ? { ...s, password: newPass } : s))
     );
     addToast('Password Reset', `Password reset for student account.`, 'success');
+    touchLocalState();
   };
 
   const markAttendance = (
@@ -740,6 +775,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `Attendance Marked: Class ${className}-${section}`,
       `Roster updated for ${date}. Present: ${present}/${total} students.`
     );
+    touchLocalState();
   };
 
   const addHomework = (data: Omit<Homework, 'id'> & { assignedDate?: string }) => {
@@ -771,6 +807,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `${data.subject} Homework Posted`,
       `Class ${data.className}-${data.section}: "${data.title}" by ${data.teacherName}. Due: ${data.dueDate}`
     );
+    touchLocalState();
   };
 
   const addClasswork = (data: Omit<Classwork, 'id'> & { date?: string }) => {
@@ -802,6 +839,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `${data.subject} Classwork Posted`,
       `Class ${data.className}-${data.section}: "${data.title}" by ${data.teacherName}`
     );
+    touchLocalState();
   };
 
   const addExamMarks = (entries: Omit<ExamMark, 'id'>[]) => {
@@ -811,6 +849,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
     setExamMarks((prev) => [...newMarks, ...prev]);
     addToast('Exam Marks Saved', `Saved marks for ${entries.length} students.`, 'success');
+    touchLocalState();
   };
 
   const makeFeePayment = (
@@ -857,6 +896,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try { confetti({ particleCount: 80, spread: 85, origin: { y: 0.5 } }); } catch (e) {}
     addToast('Payment Recorded!', `Receipt #${receiptNo} generated for ₹${amount.toLocaleString('en-IN')}.`, 'success');
+    touchLocalState();
   };
 
   const sendNotification = (data: Omit<NotificationItem, 'id' | 'createdAt' | 'isRead'>) => {
@@ -869,12 +909,14 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications((prev) => [newNotif, ...prev]);
     addToast('Announcement Broadcasted', `Sent "${data.title}" to ${data.targetAudience}.`, 'success');
     triggerPushNotification(`📢 Announcement: ${data.title}`, data.message);
+    touchLocalState();
   };
 
   const markNotificationRead = (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
+    touchLocalState();
   };
 
   const addCalendarEvent = (event: Omit<CalendarEvent, 'id'>) => {
@@ -884,11 +926,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setCalendarEvents((prev) => [newEvent, ...prev]);
     addToast('Calendar Updated', `Added "${event.title}" to Annual School Calendar.`, 'success');
+    touchLocalState();
   };
 
   const deleteCalendarEvent = (id: string) => {
     setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
     addToast('Event Removed', 'Event removed from Calendar.', 'info');
+    touchLocalState();
   };
   const addTimetableSlot = (slot: Omit<TimetableSlot, 'id'>) => {
     const newSlot: TimetableSlot = {
@@ -897,11 +941,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setTimetable((prev) => [...prev, newSlot]);
     addToast('Timetable Updated', `Added ${slot.subject} for Class ${slot.className}-${slot.section}.`, 'success');
+    touchLocalState();
   };
 
   const deleteTimetableSlot = (id: string) => {
     setTimetable((prev) => prev.filter((s) => s.id !== id));
     addToast('Slot Removed', 'Removed slot from Timetable.', 'info');
+    touchLocalState();
   };
 
   const savePeriodConfigs = (classSectionKey: string, configs: PeriodTime[]) => {
@@ -910,6 +956,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       [classSectionKey]: configs,
     }));
     addToast('Period Timings Updated', `Custom timings saved for ${classSectionKey}.`, 'success');
+    touchLocalState();
   };
 
   const addDailyOverride = (override: Omit<DailyOverride, 'id'>) => {
@@ -930,11 +977,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [...filtered, newOverride];
     });
     addToast('Schedule Updated', `Assigned substitute for Period ${override.periodId} on ${override.date}.`, 'success');
+    touchLocalState();
   };
 
   const deleteDailyOverride = (id: string) => {
     setDailyOverrides((prev) => prev.filter((o) => o.id !== id));
     addToast('Override Removed', 'Removed substitute override.', 'info');
+    touchLocalState();
   };
 
   const updateTimetableSlot = (slot: TimetableSlot) => {
@@ -947,6 +996,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return [...prev, slot];
     });
+    touchLocalState();
   };
 
   const assignClassTeacher = (className: string, section: string, teacherId: string | null) => {
@@ -984,6 +1034,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
     addToast('Class Teacher Assigned', 'Class teacher updated successfully.', 'success');
+    touchLocalState();
   };
 
   const resetAllData = () => {

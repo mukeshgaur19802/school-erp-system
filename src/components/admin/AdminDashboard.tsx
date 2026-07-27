@@ -308,24 +308,6 @@ export const AdminDashboard: React.FC = () => {
                             </button>
                             <button
                               onClick={() => {
-                                setModalData(stu);
-                                setActiveModal('ID_CARD');
-                              }}
-                              className="px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-200 text-[11px] font-semibold border border-blue-500/40 transition-colors"
-                            >
-                              ID Card
-                            </button>
-                            <button
-                              onClick={() => {
-                                setModalData(stu);
-                                setActiveModal('REPORT_CARD');
-                              }}
-                              className="px-2.5 py-1 rounded-lg bg-teal-600/30 hover:bg-teal-600 text-teal-200 text-[11px] font-semibold border border-teal-500/40 transition-colors"
-                            >
-                              Report
-                            </button>
-                            <button
-                              onClick={() => {
                                 const confirmDelete = window.confirm(`Are you absolutely sure you want to delete student ${stu.name}? This will archive their profile record and clear their outstanding balance of ₹${stu.fees.pendingAmount.toLocaleString('en-IN')}.`);
                                 if (confirmDelete) {
                                   deleteStudent(stu.id);

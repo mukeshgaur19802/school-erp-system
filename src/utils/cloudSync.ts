@@ -11,6 +11,9 @@ export interface CloudERPData {
   notifications: any[];
   busRoutes: any[];
   attendance: any[];
+  lastUpdated?: number;
+  periodConfigs?: any;
+  dailyOverrides?: any;
 }
 
 const FALLBACK_REST_URL = 'https://school-erp-system-default-rtdb.firebaseio.com/sync/krk_global_school_data.json';

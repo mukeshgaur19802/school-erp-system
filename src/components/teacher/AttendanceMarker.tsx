@@ -15,6 +15,9 @@ export const AttendanceMarker: React.FC = () => {
   const [attDate, setAttDate] = useState(() => getLocalDateString());
   const [unmarkedErrorIds, setUnmarkedErrorIds] = useState<Set<string>>(new Set());
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
   // Roster student selection
   const classStudents = students.filter(
     (s) => s.className === selectedClass && s.section === selectedSection
@@ -35,13 +38,15 @@ export const AttendanceMarker: React.FC = () => {
     });
     setAttendanceState(initial);
     setUnmarkedErrorIds(new Set());
+    setIsSaved(false);
   }, [attDate, selectedClass, selectedSection, attendance, students]);
 
   const handleStatusChange = (studentId: string, status: 'PRESENT' | 'ABSENT' | undefined) => {
     setAttendanceState((prev) => ({ ...prev, [studentId]: status }));
+    setIsSaved(false);
   };
 
-  const handleSaveAttendance = () => {
+  const handleSaveAttendance = async () => {
     const unmarked: string[] = [];
     const records = classStudents.map((s) => {
       const status = attendanceState[s.id];
@@ -65,7 +70,12 @@ export const AttendanceMarker: React.FC = () => {
     }
 
     setUnmarkedErrorIds(new Set());
+    setIsSaving(true);
+    // 1-second visual feedback for the user
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     markAttendance(records, selectedClass, selectedSection, attDate);
+    setIsSaving(false);
+    setIsSaved(true);
   };
 
   const presentCount = classStudents.filter((s) => attendanceState[s.id] === 'PRESENT').length;
@@ -161,14 +171,6 @@ export const AttendanceMarker: React.FC = () => {
           <h3 className="font-bold text-base text-white">
             Class {selectedClass}-{selectedSection} Student Roster ({classStudents.length} Students)
           </h3>
-
-          <button
-            onClick={handleSaveAttendance}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
-          >
-            <Save className="w-4 h-4" />
-            <span>Save & Send to Parents</span>
-          </button>
         </div>
 
         <div className="divide-y divide-slate-800/80">
@@ -240,10 +242,34 @@ export const AttendanceMarker: React.FC = () => {
           <div className="pt-4 border-t border-slate-800/80 flex justify-end">
             <button
               onClick={handleSaveAttendance}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-lg shadow-emerald-600/30 transition-all cursor-pointer hover:scale-[1.02]"
+              disabled={isSaving || isSaved}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all font-black text-xs shadow-lg ${
+                isSaved
+                  ? 'bg-emerald-600 border border-emerald-500 text-white shadow-emerald-700/20 cursor-default'
+                  : isSaving
+                    ? 'bg-slate-800 border border-slate-700 text-slate-400 cursor-not-allowed shadow-none'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-600/30 hover:scale-[1.02] cursor-pointer'
+              }`}
             >
-              <Save className="w-4 h-4" />
-              <span>Save & Send to Parents</span>
+              {isSaved ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-white" />
+                  <span>Saved & Sent successfully! ✓</span>
+                </>
+              ) : isSaving ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Saving & Sending...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save & Send to Parents</span>
+                </>
+              )}
             </button>
           </div>
         )}

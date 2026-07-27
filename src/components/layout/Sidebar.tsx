@@ -131,42 +131,6 @@ export const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* Document Generators */}
-      {currentStudent && (
-        <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-2">
-          <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">
-            Document Generators
-          </span>
-          
-          <button
-            onClick={() => {
-              setModalData(currentStudent);
-              setActiveModal('ID_CARD');
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs transition-colors border border-slate-700"
-          >
-            <div className="flex items-center gap-2">
-              <Printer className="w-3.5 h-3.5 text-blue-400" />
-              <span>Student ID Card</span>
-            </div>
-            <Sparkles className="w-3 h-3 text-amber-400" />
-          </button>
-
-          <button
-            onClick={() => {
-              setModalData(currentStudent);
-              setActiveModal('REPORT_CARD');
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs transition-colors border border-slate-700"
-          >
-            <div className="flex items-center gap-2">
-              <Award className="w-3.5 h-3.5 text-teal-400" />
-              <span>Progress Report Card</span>
-            </div>
-            <Sparkles className="w-3 h-3 text-amber-400" />
-          </button>
-        </div>
-      )}
     </aside>
   );
 };
