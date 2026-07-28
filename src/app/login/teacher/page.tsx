@@ -63,6 +63,9 @@ export default function TeacherLoginPage() {
           <Link href="/" className="inline-block bg-white p-3 rounded-2xl shadow-2xl max-w-[240px] border-2 border-teal-500/40 hover:scale-105 transition-transform">
             <img src="/logo.jpg" alt="Logo" className="w-full h-auto object-contain max-h-16" />
           </Link>
+          <div className="flex items-center justify-center gap-2">
+            <span className="px-3 py-1 rounded-full bg-teal-500/15 text-teal-300 text-[10px] font-bold uppercase tracking-wider">Teacher</span>
+          </div>
           <div>
             <h1 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">KIDZ R KIDZ Teacher Space</h1>
             <p className="text-xs text-teal-400 font-bold uppercase tracking-wider">Class Teacher App</p>

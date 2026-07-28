@@ -42,8 +42,19 @@ export default function WelcomePortal() {
             Select Your Portal Experience
           </h2>
           <p className="text-xs sm:text-sm text-slate-400">
-            KIDZ R KIDZ School Management System operates in two modes. Select the optimized interface for your device or role below.
+            KIDZ R KIDZ School Management System supports separate Admin, Teacher, and Parent logins.
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link href="/login/admin" className="px-4 py-2 rounded-2xl bg-blue-600 text-white text-xs font-bold uppercase tracking-wide hover:bg-blue-500 transition">
+              Admin Login
+            </Link>
+            <Link href="/login/teacher" className="px-4 py-2 rounded-2xl bg-teal-600 text-white text-xs font-bold uppercase tracking-wide hover:bg-teal-500 transition">
+              Teacher Login
+            </Link>
+            <Link href="/login/parents" className="px-4 py-2 rounded-2xl bg-indigo-600 text-white text-xs font-bold uppercase tracking-wide hover:bg-indigo-500 transition">
+              Parents Login
+            </Link>
+          </div>
         </div>
 
         {/* Portal Grid */}

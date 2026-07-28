@@ -12,7 +12,7 @@ export const ParentAcademics: React.FC = () => {
   const [showAllDatesParent, setShowAllDatesParent] = useState(false);
   const [attendanceMonth, setAttendanceMonth] = useState(() => {
     const d = new Date(selectedParentDate);
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+    return d.toISOString().slice(0, 7);
   });
 
   const normalizeDateValue = (value?: string) => value?.slice(0, 10) || '';
@@ -46,6 +46,21 @@ export const ParentAcademics: React.FC = () => {
   const getCellDetails = (day: string, periodId: string) => {
     return studentTt.find(s => s.day === day && s.periodId === periodId);
   };
+
+  const attendanceCalendarCells = (() => {
+    const [year, month] = attendanceMonth.split('-').map(Number);
+    const firstWeekday = new Date(year, month - 1, 1).getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const cells: Array<null | {dateStr:string;day:number;status?:string}> = [];
+    for (let i = 0; i < firstWeekday; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateObj = new Date(year, month - 1, d);
+      const dateStr = dateObj.toISOString().slice(0, 10);
+      const rec = studentAtt.find(a => a.date === dateStr);
+      cells.push({ dateStr, day: d, status: rec?.status });
+    }
+    return cells;
+  })();
 
   return (
     <div className="space-y-6 text-slate-100 animate-fade-in">
@@ -204,29 +219,43 @@ export const ParentAcademics: React.FC = () => {
             Monthly Attendance
           </h3>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-slate-300">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
               <button
                 type="button"
                 onClick={() => {
-                  const d = new Date(attendanceMonth);
-                  d.setMonth(d.getMonth() - 1);
-                  setAttendanceMonth(new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10));
+                  const [year, month] = attendanceMonth.split('-').map(Number);
+                  const date = new Date(year, month - 1, 1);
+                  date.setMonth(date.getMonth() - 1);
+                  setAttendanceMonth(`${date.getFullYear().toString().padStart(4, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}`);
                 }}
                 className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700"
               >Prev</button>
-              <div className="font-bold uppercase text-white text-sm">
-                {new Date(attendanceMonth).toLocaleString(undefined, { month: 'long', year: 'numeric' })}
-              </div>
+
+              <label className="flex items-center gap-2 text-slate-300 text-xs">
+                <span className="font-semibold">Month</span>
+                <input
+                  type="month"
+                  value={attendanceMonth}
+                  onChange={(e) => setAttendanceMonth(e.target.value)}
+                  className="bg-slate-900 text-white px-2 py-1 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500"
+                />
+              </label>
+
               <button
                 type="button"
                 onClick={() => {
-                  const d = new Date(attendanceMonth);
-                  d.setMonth(d.getMonth() + 1);
-                  setAttendanceMonth(new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10));
+                  const [year, month] = attendanceMonth.split('-').map(Number);
+                  const date = new Date(year, month - 1, 1);
+                  date.setMonth(date.getMonth() + 1);
+                  setAttendanceMonth(`${date.getFullYear().toString().padStart(4, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}`);
                 }}
                 className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700"
               >Next</button>
+            </div>
+
+            <div className="text-xs text-slate-400">
+              Showing attendance for <span className="font-semibold text-white">{new Date(`${attendanceMonth}-01`).toLocaleString(undefined, { month: 'long', year: 'numeric' })}</span>
             </div>
 
             <div className="text-xs text-slate-400">Legend: <span className="ml-2 text-emerald-300 font-bold">P</span>=Present <span className="ml-2 text-rose-300 font-bold">A</span>=Absent <span className="ml-2 text-amber-300 font-bold">L</span>=Late</div>
@@ -241,37 +270,20 @@ export const ParentAcademics: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-7 gap-2 mt-2">
-              {
-                (() => {
-                  const first = new Date(attendanceMonth);
-                  const year = first.getFullYear();
-                  const month = first.getMonth();
-                  const firstWeekday = new Date(year, month, 1).getDay();
-                  const daysInMonth = new Date(year, month + 1, 0).getDate();
-                  const cells: Array<null | {dateStr:string;day:number;status?:string}> = [];
-                  for (let i=0;i<firstWeekday;i++) cells.push(null);
-                  for (let d=1; d<=daysInMonth; d++) {
-                    const dateObj = new Date(year, month, d);
-                    const dateStr = dateObj.toISOString().slice(0,10);
-                    const rec = studentAtt.find(a => a.date === dateStr);
-                    cells.push({ dateStr, day: d, status: rec?.status });
-                  }
-                  return cells.map((cell, idx) => {
-                    if (!cell) return <div key={"empty-"+idx} className="h-14 bg-transparent" />;
-                    const cls = cell.status === 'PRESENT' ? 'bg-emerald-600/20 text-emerald-200' : cell.status === 'ABSENT' ? 'bg-rose-600/20 text-rose-200' : cell.status === 'LATE' ? 'bg-amber-600/20 text-amber-200' : 'bg-slate-800/40 text-slate-300';
-                    return (
-                      <div key={cell.dateStr} className={`h-14 p-2 rounded-md border border-slate-800/60 ${cls} text-[12px]`}>
-                        <div className="flex items-start justify-between">
-                          <div className="font-bold">{cell.day}</div>
-                          <div className="text-[10px] font-semibold">
-                            {cell.status === 'PRESENT' ? 'P' : cell.status === 'ABSENT' ? 'A' : cell.status === 'LATE' ? 'L' : ''}
-                          </div>
-                        </div>
+              {attendanceCalendarCells.map((cell, idx) => {
+                if (!cell) return <div key={"empty-" + idx} className="h-14 bg-transparent" />;
+                const cls = cell.status === 'PRESENT' ? 'bg-emerald-600/20 text-emerald-200' : cell.status === 'ABSENT' ? 'bg-rose-600/20 text-rose-200' : cell.status === 'LATE' ? 'bg-amber-600/20 text-amber-200' : 'bg-slate-800/40 text-slate-300';
+                return (
+                  <div key={cell.dateStr} className={`h-14 p-2 rounded-md border border-slate-800/60 ${cls} text-[12px]`}>
+                    <div className="flex items-start justify-between">
+                      <div className="font-bold">{cell.day}</div>
+                      <div className="text-[10px] font-semibold">
+                        {cell.status === 'PRESENT' ? 'P' : cell.status === 'ABSENT' ? 'A' : cell.status === 'LATE' ? 'L' : ''}
                       </div>
-                    );
-                  });
-                })()
-              }
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

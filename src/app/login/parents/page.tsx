@@ -58,6 +58,9 @@ export default function ParentsLoginPage() {
           <Link href="/" className="inline-block bg-white p-3 rounded-2xl shadow-2xl max-w-[240px] border-2 border-indigo-500/40 hover:scale-105 transition-transform">
             <img src="/logo.jpg" alt="Logo" className="w-full h-auto object-contain max-h-16" />
           </Link>
+          <div className="flex items-center justify-center gap-2">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-300 text-[10px] font-bold uppercase tracking-wider">Parents</span>
+          </div>
           <div>
             <h1 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">KIDZ R KIDZ Parents Portal</h1>
             <p className="text-xs text-indigo-400 font-bold uppercase tracking-wider">Parent & Student Hub</p>
