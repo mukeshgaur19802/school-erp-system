@@ -288,6 +288,15 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (authStr === 'true') {
         setIsAuthenticated(true);
       }
+
+      const selectedStudent = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'SELECTED_STUDENT_ID');
+      if (selectedStudent) {
+        setSelectedStudentId(selectedStudent);
+      }
+      const selectedTeacher = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'SELECTED_TEACHER_ID');
+      if (selectedTeacher) {
+        setSelectedTeacherId(selectedTeacher);
+      }
     }
 
     setStudents(recalculateAlphabeticalRollNumbers(loadStoredData<Student[]>('STUDENTS', INITIAL_STUDENTS)));
@@ -493,8 +502,12 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeSetStorage('DAILY_OVERRIDES', dailyOverrides);
       safeSetStorage('DELETED_STUDENTS', deletedStudents);
       safeSetStorage('DELETED_TEACHERS', deletedTeachers);
+      try {
+        sessionStorage.setItem(CURRENT_STORAGE_PREFIX + 'SELECTED_STUDENT_ID', selectedStudentId);
+        sessionStorage.setItem(CURRENT_STORAGE_PREFIX + 'SELECTED_TEACHER_ID', selectedTeacherId);
+      } catch (e) {}
     }
-  }, [isAuthenticated, currentUser, activeRole, students, teachers, deletedStudents, deletedTeachers, notifications, homework, classwork, examMarks, attendance, busRoutes, calendarEvents, timetable, periodConfigs, dailyOverrides]);
+  }, [isAuthenticated, currentUser, activeRole, students, teachers, deletedStudents, deletedTeachers, notifications, homework, classwork, examMarks, attendance, busRoutes, calendarEvents, timetable, periodConfigs, dailyOverrides, selectedStudentId, selectedTeacherId]);
 
   const login = (role: UserRole, userDetails: { email?: string; mobile?: string; name: string; teacherId?: string }) => {
     setIsAuthenticated(true);
