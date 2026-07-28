@@ -289,11 +289,11 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsAuthenticated(true);
       }
 
-      const selectedStudent = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'SELECTED_STUDENT_ID');
+      const selectedStudent = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'SELECTED_STUDENT_ID') || loadStoredData<string>('SELECTED_STUDENT_ID', '');
       if (selectedStudent) {
         setSelectedStudentId(selectedStudent);
       }
-      const selectedTeacher = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'SELECTED_TEACHER_ID');
+      const selectedTeacher = sessionStorage.getItem(CURRENT_STORAGE_PREFIX + 'SELECTED_TEACHER_ID') || loadStoredData<string>('SELECTED_TEACHER_ID', 'TCH-DEMO-001');
       if (selectedTeacher) {
         setSelectedTeacherId(selectedTeacher);
       }
@@ -500,8 +500,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeSetStorage('TIMETABLE', timetable);
       safeSetStorage('PERIOD_CONFIGS', periodConfigs);
       safeSetStorage('DAILY_OVERRIDES', dailyOverrides);
-      safeSetStorage('DELETED_STUDENTS', deletedStudents);
-      safeSetStorage('DELETED_TEACHERS', deletedTeachers);
+      safeSetStorage('SELECTED_STUDENT_ID', selectedStudentId);
+      safeSetStorage('SELECTED_TEACHER_ID', selectedTeacherId);
       try {
         sessionStorage.setItem(CURRENT_STORAGE_PREFIX + 'SELECTED_STUDENT_ID', selectedStudentId);
         sessionStorage.setItem(CURRENT_STORAGE_PREFIX + 'SELECTED_TEACHER_ID', selectedTeacherId);
