@@ -415,7 +415,7 @@ export const TeacherDashboard: React.FC = () => {
                 ) : (
                   filteredHomeworkHistory.map((hw) => (
                     <div key={hw.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-                      <div className="font-bold text-white">{hw.title} (Due: {hw.dueDate})</div>
+                      <div className="font-bold text-white">{hw.title}</div>
                       <p className="text-slate-300 text-[11px]">"{hw.description}"</p>
                     </div>
                   ))

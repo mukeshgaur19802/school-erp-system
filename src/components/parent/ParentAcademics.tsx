@@ -10,6 +10,10 @@ export const ParentAcademics: React.FC = () => {
   const [academicTab, setAcademicTab] = useState<'ATTENDANCE' | 'HOMEWORK' | 'TIMETABLE'>('HOMEWORK');
   const [selectedParentDate, setSelectedParentDate] = useState(() => getLocalDateString());
   const [showAllDatesParent, setShowAllDatesParent] = useState(false);
+  const [attendanceMonth, setAttendanceMonth] = useState(() => {
+    const d = new Date(selectedParentDate);
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  });
 
   const normalizeDateValue = (value?: string) => value?.slice(0, 10) || '';
 
@@ -130,10 +134,10 @@ export const ParentAcademics: React.FC = () => {
                 ) : (
                   filteredHw.map((hw) => (
                     <div key={hw.id} className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-cyan-300">{hw.subject}</span>
-                        <span className="text-[10px] text-amber-400 font-semibold">Due: {hw.dueDate}</span>
-                      </div>
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-cyan-300">{hw.subject}</span>
+                                <span className="text-[10px] text-slate-400 font-mono">{hw.assignedDate}</span>
+                              </div>
                       <h4 className="font-bold text-sm text-white">{hw.title}</h4>
                       <p className="text-xs text-slate-300">{hw.description}</p>
                       {hw.attachmentUrl && (hw.attachmentUrl.startsWith('data:image/') || hw.attachmentUrl.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? (
@@ -192,26 +196,83 @@ export const ParentAcademics: React.FC = () => {
         </div>
       )}
 
-      {/* Attendance Tab */}
+      {/* Attendance Tab (monthly calendar view) */}
       {academicTab === 'ATTENDANCE' && (
         <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
           <h3 className="font-bold text-base text-white flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            Daily Attendance Register Logs
+            Monthly Attendance
           </h3>
-          <div className="divide-y divide-slate-800">
-            {studentAtt.map((att) => (
-              <div key={att.id} className="py-3 flex items-center justify-between text-xs">
-                <span className="text-slate-300 font-medium">{att.date}</span>
-                <span className={`font-bold px-3 py-1 rounded-xl border ${
-                  att.status === 'PRESENT'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                    : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                }`}>
-                  {att.status}
-                </span>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-slate-300">
+              <button
+                type="button"
+                onClick={() => {
+                  const d = new Date(attendanceMonth);
+                  d.setMonth(d.getMonth() - 1);
+                  setAttendanceMonth(new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10));
+                }}
+                className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700"
+              >Prev</button>
+              <div className="font-bold uppercase text-white text-sm">
+                {new Date(attendanceMonth).toLocaleString(undefined, { month: 'long', year: 'numeric' })}
               </div>
-            ))}
+              <button
+                type="button"
+                onClick={() => {
+                  const d = new Date(attendanceMonth);
+                  d.setMonth(d.getMonth() + 1);
+                  setAttendanceMonth(new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10));
+                }}
+                className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700"
+              >Next</button>
+            </div>
+
+            <div className="text-xs text-slate-400">Legend: <span className="ml-2 text-emerald-300 font-bold">P</span>=Present <span className="ml-2 text-rose-300 font-bold">A</span>=Absent <span className="ml-2 text-amber-300 font-bold">L</span>=Late</div>
+          </div>
+
+          {/* Calendar grid */}
+          <div className="mt-3 bg-slate-950/20 rounded-xl p-4">
+            <div className="grid grid-cols-7 gap-2 text-[11px] text-slate-400 uppercase text-center font-semibold">
+              {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+                <div key={d} className="py-1">{d}</div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-2 mt-2">
+              {
+                (() => {
+                  const first = new Date(attendanceMonth);
+                  const year = first.getFullYear();
+                  const month = first.getMonth();
+                  const firstWeekday = new Date(year, month, 1).getDay();
+                  const daysInMonth = new Date(year, month + 1, 0).getDate();
+                  const cells: Array<null | {dateStr:string;day:number;status?:string}> = [];
+                  for (let i=0;i<firstWeekday;i++) cells.push(null);
+                  for (let d=1; d<=daysInMonth; d++) {
+                    const dateObj = new Date(year, month, d);
+                    const dateStr = dateObj.toISOString().slice(0,10);
+                    const rec = studentAtt.find(a => a.date === dateStr);
+                    cells.push({ dateStr, day: d, status: rec?.status });
+                  }
+                  return cells.map((cell, idx) => {
+                    if (!cell) return <div key={"empty-"+idx} className="h-14 bg-transparent" />;
+                    const cls = cell.status === 'PRESENT' ? 'bg-emerald-600/20 text-emerald-200' : cell.status === 'ABSENT' ? 'bg-rose-600/20 text-rose-200' : cell.status === 'LATE' ? 'bg-amber-600/20 text-amber-200' : 'bg-slate-800/40 text-slate-300';
+                    return (
+                      <div key={cell.dateStr} className={`h-14 p-2 rounded-md border border-slate-800/60 ${cls} text-[12px]`}>
+                        <div className="flex items-start justify-between">
+                          <div className="font-bold">{cell.day}</div>
+                          <div className="text-[10px] font-semibold">
+                            {cell.status === 'PRESENT' ? 'P' : cell.status === 'ABSENT' ? 'A' : cell.status === 'LATE' ? 'L' : ''}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()
+              }
+            </div>
           </div>
         </div>
       )}

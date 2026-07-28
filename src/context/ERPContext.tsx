@@ -784,7 +784,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const hwNotif: NotificationItem = {
       id: 'NOTIF-' + Date.now(),
       title: `${data.subject} Homework Assigned`,
-      message: `${data.teacherName} posted: "${data.title}" for Class ${data.className}-${data.section}. Due: ${data.dueDate}.`,
+      message: `${data.teacherName} posted: "${data.title}" for Class ${data.className}-${data.section}. ${data.dueDate ? `Due: ${data.dueDate}.` : ''}`,
       category: 'Homework',
       targetAudience: 'Selected Classes',
       targetClassSection: `${data.className}-${data.section}`,
@@ -798,7 +798,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Homework Posted', `Published homework for Class ${data.className}-${data.section}.`, 'success');
     triggerPushNotification(
       `${data.subject} Homework Posted`,
-      `Class ${data.className}-${data.section}: "${data.title}" by ${data.teacherName}. Due: ${data.dueDate}`
+      `Class ${data.className}-${data.section}: "${data.title}" by ${data.teacherName}.${data.dueDate ? ` Due: ${data.dueDate}` : ''}`
     );
     touchLocalState();
   };

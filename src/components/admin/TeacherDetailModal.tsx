@@ -136,10 +136,10 @@ export const TeacherDetailModal: React.FC = () => {
             <div className="space-y-2">
               {teacherHomework.map((hw) => (
                 <div key={hw.id} className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-1">
-                  <div className="flex justify-between font-bold text-white">
-                    <span>{hw.title} (Class {hw.className}-{hw.section})</span>
-                    <span className="text-amber-300 text-[10px]">Due: {hw.dueDate}</span>
-                  </div>
+                    <div className="flex justify-between font-bold text-white">
+                      <span>{hw.title} (Class {hw.className}-{hw.section})</span>
+                      <span className="text-slate-400 text-[10px]">{hw.assignedDate}</span>
+                    </div>
                   <p className="text-slate-300 text-[11px]">"{hw.description}"</p>
                 </div>
               ))}

@@ -13,7 +13,6 @@ export const HomeworkManager: React.FC = () => {
   const [className, setClassName] = useState(() => currentTeacher?.assignments[0]?.className || 'Class 5');
   const [section, setSection] = useState(() => currentTeacher?.assignments[0]?.section || 'A');
   const [workDate, setWorkDate] = useState(() => getLocalDateString());
-  const [dueDate, setDueDate] = useState(() => getLocalDateString());
   const [description, setDescription] = useState('');
   const [attachmentName, setAttachmentName] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
@@ -70,7 +69,7 @@ export const HomeworkManager: React.FC = () => {
         className,
         section,
         teacherName,
-        dueDate,
+        dueDate: '',
         description,
         attachmentName,
         attachmentUrl: attachmentUrl || '#',
@@ -222,18 +221,7 @@ export const HomeworkManager: React.FC = () => {
                 />
               </div>
 
-              {workType === 'HOMEWORK' && (
-                <div>
-                  <label className="block font-medium text-slate-300 mb-1">Due Submission *</label>
-                  <input
-                    type="date"
-                    required={workType === 'HOMEWORK'}
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-mono"
-                  />
-                </div>
-              )}
+              {/* Removed Due Submission input by request - homework will no longer auto-expire */}
             </div>
 
             <div>
@@ -356,11 +344,6 @@ export const HomeworkManager: React.FC = () => {
                     </div>
                     <span className="text-xs text-slate-400 font-medium flex items-center gap-1 font-mono">
                       <Calendar className="w-3 h-3 text-slate-400" /> {item.dateValue}
-                      {item.type === 'HOMEWORK' && (
-                        <span className="text-amber-400 ml-1.5 flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> Due: {item.dueDate}
-                        </span>
-                      )}
                     </span>
                   </div>
 
