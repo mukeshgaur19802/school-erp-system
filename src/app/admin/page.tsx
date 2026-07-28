@@ -1,8 +1,7 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useERP } from '../../context/ERPContext';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShieldAlert, Mail, Lock, ArrowRight, Laptop } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Sidebar } from '../../components/layout/Sidebar';
@@ -28,10 +27,17 @@ import { TeacherDetailModal } from '../../components/admin/TeacherDetailModal';
 
 export default function AdminPortal() {
   const { isAuthenticated, activeRole, activeTab, activeModal, login, logout } = useERP();
+  const router = useRouter();
   
   const [adminEmail, setAdminEmail] = useState('mukeshgaur19802@gmail.com');
   const [adminPassword, setAdminPassword] = useState('admin123');
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login/admin');
+    }
+  }, [isAuthenticated, router]);
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,8 +48,15 @@ export default function AdminPortal() {
     }
   };
 
-  // 1. Not Authenticated: Render Admin Login Form
+  // 1. Not Authenticated: Render redirecting screen
   if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-slate-400 font-sans">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4" />
+        <p className="text-xs font-bold uppercase tracking-widest">Redirecting to login...</p>
+      </div>
+    );
+  }
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-slate-100 relative overflow-hidden font-sans">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />

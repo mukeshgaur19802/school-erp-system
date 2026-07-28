@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useERP, DEFAULT_PERIODS } from '../../context/ERPContext';
+import { useERP, DEFAULT_PERIODS, getLocalDateString } from '../../context/ERPContext';
 import { PeriodTime } from '../../types';
 import { BookMarked, CheckCircle2, Award, Calendar, BookOpen, Clock, Printer, Sparkles, Paperclip } from 'lucide-react';
 
 export const ParentAcademics: React.FC = () => {
   const { currentStudent, attendance, homework, classwork, examMarks, timetable, setActiveModal, setModalData, periodConfigs } = useERP();
   const [academicTab, setAcademicTab] = useState<'ATTENDANCE' | 'HOMEWORK' | 'TIMETABLE'>('HOMEWORK');
-  const [selectedParentDate, setSelectedParentDate] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const [selectedParentDate, setSelectedParentDate] = useState(() => getLocalDateString());
   const [showAllDatesParent, setShowAllDatesParent] = useState(false);
+
+  const normalizeDateValue = (value?: string) => value?.slice(0, 10) || '';
 
   const studentAtt = attendance.filter((a) => a.studentId === currentStudent?.id);
   const studentHw = homework.filter((h) => h.className === currentStudent?.className && h.section === currentStudent?.section);
@@ -18,10 +20,10 @@ export const ParentAcademics: React.FC = () => {
 
   const filteredHw = showAllDatesParent 
     ? studentHw 
-    : studentHw.filter(h => h.assignedDate === selectedParentDate);
+    : studentHw.filter(h => normalizeDateValue(h.assignedDate) === normalizeDateValue(selectedParentDate));
   const filteredCw = showAllDatesParent 
     ? studentCw 
-    : studentCw.filter(c => c.date === selectedParentDate);
+    : studentCw.filter(c => normalizeDateValue(c.date) === normalizeDateValue(selectedParentDate));
 
   const classKey = currentStudent?.section ? `${currentStudent.className}-${currentStudent.section}` : (currentStudent?.className || '');
   const activePeriods = periodConfigs[classKey] || DEFAULT_PERIODS;

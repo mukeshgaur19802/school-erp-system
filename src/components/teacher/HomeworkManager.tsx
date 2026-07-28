@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useERP, getLocalDateString } from '../../context/ERPContext';
 import { BookOpen, Upload, Send, CheckCircle2, Paperclip, Clock, Filter, Calendar } from 'lucide-react';
 
@@ -17,6 +17,41 @@ export const HomeworkManager: React.FC = () => {
   const [description, setDescription] = useState('');
   const [attachmentName, setAttachmentName] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
+
+  const teacherAssignments = currentTeacher?.assignments ?? [];
+  const classOptions = Array.from(new Set([
+    ...teacherAssignments.map((assignment) => assignment.className).filter(Boolean),
+    'Play Group',
+    'Nursery',
+    'LKG',
+    'UKG',
+    'Class 1',
+    'Class 2',
+    'Class 3',
+    'Class 4',
+    'Class 5',
+    'Class 6',
+    'Class 7',
+    'Class 8',
+  ]));
+  const sectionOptions = Array.from(new Set([
+    ...teacherAssignments.map((assignment) => assignment.section).filter(Boolean),
+    'A',
+    'B',
+    'C',
+    'D',
+  ]));
+
+  useEffect(() => {
+    if (!teacherAssignments.length) {
+      return;
+    }
+
+    const firstAssignment = teacherAssignments[0];
+    setSubject(firstAssignment.subject || 'Mathematics');
+    setClassName(firstAssignment.className || 'Class 5');
+    setSection(firstAssignment.section || 'A');
+  }, [teacherAssignments]);
 
   // Feed filters
   const [selectedFeedDate, setSelectedFeedDate] = useState(() => getLocalDateString());
@@ -155,7 +190,7 @@ export const HomeworkManager: React.FC = () => {
                   onChange={(e) => setClassName(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-sans font-bold"
                 >
-                  {['Play Group', 'Nursery', 'LKG', 'UKG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8'].map((c) => (
+                  {classOptions.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
@@ -168,7 +203,7 @@ export const HomeworkManager: React.FC = () => {
                   onChange={(e) => setSection(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-sans font-bold"
                 >
-                  {['A','B','C','D'].map((s) => (
+                  {sectionOptions.map((s) => (
                     <option key={s} value={s}>Sec {s}</option>
                   ))}
                 </select>
