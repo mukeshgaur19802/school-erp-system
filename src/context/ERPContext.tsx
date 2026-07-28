@@ -632,6 +632,12 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteStudent = (id: string) => {
+    // ✋ ROLE-BASED ACCESS CONTROL: Only ADMIN can delete student records
+    if (activeRole !== 'ADMIN') {
+      addToast('Access Denied', 'Only administrators can delete student records. This action is logged and monitored.', 'error');
+      return;
+    }
+
     const studentToDelete = students.find(s => s.id === id);
     if (!studentToDelete) return;
 
@@ -660,6 +666,12 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTeacher = (id: string) => {
+    // ✋ ROLE-BASED ACCESS CONTROL: Only ADMIN can delete teacher records
+    if (activeRole !== 'ADMIN') {
+      addToast('Access Denied', 'Only administrators can delete teacher records. This action is logged and monitored.', 'error');
+      return;
+    }
+
     const teacherToDelete = teachers.find(t => t.id === id);
     if (!teacherToDelete) return;
 
@@ -923,6 +935,11 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCalendarEvent = (id: string) => {
+    // ✋ ROLE-BASED ACCESS CONTROL: Only ADMIN can delete calendar events
+    if (activeRole !== 'ADMIN') {
+      addToast('Access Denied', 'Only administrators can delete calendar events.', 'error');
+      return;
+    }
     setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
     addToast('Event Removed', 'Event removed from Calendar.', 'info');
     touchLocalState();
@@ -938,6 +955,11 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTimetableSlot = (id: string) => {
+    // ✋ ROLE-BASED ACCESS CONTROL: Only ADMIN can delete timetable slots
+    if (activeRole !== 'ADMIN') {
+      addToast('Access Denied', 'Only administrators can delete timetable slots.', 'error');
+      return;
+    }
     setTimetable((prev) => prev.filter((s) => s.id !== id));
     addToast('Slot Removed', 'Removed slot from Timetable.', 'info');
     touchLocalState();
@@ -974,6 +996,11 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteDailyOverride = (id: string) => {
+    // ✋ ROLE-BASED ACCESS CONTROL: Only ADMIN can delete daily overrides
+    if (activeRole !== 'ADMIN') {
+      addToast('Access Denied', 'Only administrators can delete daily overrides.', 'error');
+      return;
+    }
     setDailyOverrides((prev) => prev.filter((o) => o.id !== id));
     addToast('Override Removed', 'Removed substitute override.', 'info');
     touchLocalState();
